@@ -1,7 +1,7 @@
 ##### PROCESSING methods #####
 
 #' CNV.fit
-#' @description Normalize query sample intensities by fitting intensities to reference set using a linear regression model.
+#' @description Normalize qury sample intensities by fitting intensities to reference set using a linear regression model.
 #' @param query \code{CNV.data} object of query sample (single sample).
 #' @param ref \code{CNV.data} object of reference set.
 #' @param anno \code{CNV.anno} object. Use \code{CNV.create_anno} do create.
