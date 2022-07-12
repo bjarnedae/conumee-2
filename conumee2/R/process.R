@@ -17,22 +17,22 @@
 #' d <- CNV.load(MsetEx)
 #' data(detail_regions)
 #' anno <- CNV.create_anno(detail_regions = detail_regions)
-#' 
+#'
 #' # create object
 #' x <- CNV.fit(query = d['GroupB_1'], ref = d[c('GroupA_1', 'GroupA_2', 'GroupA_3')], anno)
-#' 
+#'
 #' # modify object
 #' #x <- CNV.bin(x)
 #' #x <- CNV.detail(x)
 #' #x <- CNV.segment(x)
-#' 
+#'
 #' # general information
 #' x
 #' show(x)
-#' 
+#'
 #' # coefficients of linear regression
 #' coef(x)
-#' 
+#'
 #' # show or replace sample name
 #' names(x)
 #' names(x) <- 'Sample 1'
@@ -43,55 +43,62 @@ setGeneric("CNV.fit", function(query, ref, anno, ...) {
 })
 
 #' @rdname CNV.fit
-setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV.anno"), 
-    function(query, ref, anno, name = NULL, intercept = TRUE) {
-        if (ncol(query@intensity) == 0) 
-            stop("query intensities unavailable, run CNV.load")
-        if (ncol(ref@intensity) == 0) 
-            stop("reference set intensities unavailable, run CNV.load")
-        
-        if (ncol(query@intensity) != 1) 
-            stop("query contains more than one sample.")
-        if (ncol(ref@intensity) == 1) 
-            warning("reference set contains only a single sample. use more samples for better results.")
-        
-        p <- names(anno@probes)  # ordered by location
-        if (!all(is.element(p, rownames(query@intensity)))) 
-            stop("query intensities not given for all probes.")
-        if (!all(is.element(p, rownames(ref@intensity)))) 
-            stop("reference set intensities not given for all probes.")
-        
-        object <- new("CNV.analysis")
-        object@date <- date()
-        object@fit$args <- list(intercept = intercept)
-        
-        if (!is.null(name)) {
-            names(object) <- name
-        } else {
-            names(object) <- colnames(query@intensity)
-        }
-        object@anno <- anno
-        
-        r <- cor(query@intensity[p, ], ref@intensity[p, ])[1, ] < 0.99
-        if (any(!r)) message("query sample seems to also be in the reference set. not used for fit.")
-        if (intercept) {
-            ref.fit <- lm(y ~ ., data = data.frame(y = query@intensity[p, 
-                1], X = ref@intensity[p, r]))
-        } else {
-            ref.fit <- lm(y ~ . - 1, data = data.frame(y = query@intensity[p, 
-                1], X = ref@intensity[p, r]))
-        }
-        object@fit$coef <- ref.fit$coefficients
-        
-        ref.predict <- predict(ref.fit)
-        ref.predict[ref.predict < 1] <- 1
-        
-        object@fit$ratio <- log2(query@intensity[p, 1]/ref.predict[p])
-        object@fit$noise <- sqrt(mean((object@fit$ratio[-1] - object@fit$ratio[-length(object@fit$ratio)])^2, 
-            na.rm = TRUE))
-        
-        return(object)
-    })
+setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV.anno"),
+          function(query, ref, anno, name = NULL, intercept = TRUE) {
+            if (ncol(query@intensity) == 0)
+              stop("query intensities unavailable, run CNV.load")
+            if (ncol(ref@intensity) == 0)
+              stop("reference set intensities unavailable, run CNV.load")
+
+            if (ncol(query@intensity) != 1)
+              message("using multiple query samples")
+            if (ncol(ref@intensity) == 1)
+              warning("reference set contains only a single sample. use more samples for better results.")
+
+            p <- names(anno@probes)  # ordered by location
+            if (!all(is.element(p, rownames(query@intensity))))
+              stop("query intensities not given for all probes.")
+            if (!all(is.element(p, rownames(ref@intensity))))
+              stop("reference set intensities not given for all probes.")
+
+            object <- new("CNV.analysis")
+            object@date <- date()
+            object@fit$args <- list(intercept = intercept)
+
+            object@anno <- anno
+
+            object@fit$coef <- data.frame(matrix(ncol = 0, nrow = ncol(ref@intensity)))
+            object@fit$ratio <- data.frame(matrix(ncol = 0, nrow = length(p)))
+            for (i in 1:ncol(query@intensity)) {
+              r <- cor(query@intensity[p, ], ref@intensity[p, ])[i, ] < 0.99
+              if (any(!r)) message("query sample seems to also be in the reference set. not used for fit.")
+              if (intercept) {
+                ref.fit <- lm(y ~ ., data = data.frame(y = query@intensity[p,
+                                                                           i], X = ref@intensity[p, r]))
+              } else {
+                ref.fit <- lm(y ~ . - 1, data = data.frame(y = query@intensity[p,
+                                                                               i], X = ref@intensity[p, r]))
+              }
+              object@fit$coef <- cbind(object@fit$coef,as.numeric(ref.fit$coefficients[-1]))
+
+              ref.predict <- predict(ref.fit)
+              ref.predict[ref.predict < 1] <- 1
+
+              object@fit$ratio <- cbind(object@fit$ratio, as.numeric(log2(query@intensity[p, i]/ref.predict[p])))
+            }
+            colnames(object@fit$coef) <- colnames(query@intensity)
+            rownames(object@fit$coef) <- colnames(ref@intensity)
+            colnames(object@fit$ratio) <- colnames(query@intensity)
+            rownames(object@fit$ratio) <- p
+
+            object@fit$noise <- as.numeric()
+            for (i in 1:ncol(query@intensity)) {
+              object@fit$noise <- c(object@fit$noise, sqrt(mean((object@fit$ratio[-1,i] - object@fit$ratio[-nrow(object@fit$ratio),i])^2,
+                                                                na.rm = TRUE)))
+            }
+            names(object@fit$noise) <- colnames(query@intensity)
+            return(object)
+          })
 
 
 #' CNV.bin
@@ -107,22 +114,22 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
 #' d <- CNV.load(MsetEx)
 #' data(detail_regions)
 #' anno <- CNV.create_anno(detail_regions = detail_regions)
-#' 
+#'
 #' # create object
 #' x <- CNV.fit(query = d['GroupB_1'], ref = d[c('GroupA_1', 'GroupA_2', 'GroupA_3')], anno)
-#' 
+#'
 #' # modify object
 #' x <- CNV.bin(x)
 #' #x <- CNV.detail(x)
 #' #x <- CNV.segment(x)
-#' 
+#'
 #' # general information
 #' x
 #' show(x)
-#' 
+#'
 #' # coefficients of linear regression
 #' coef(x)
-#' 
+#'
 #' # show or replace sample name
 #' names(x)
 #' names(x) <- 'Sample 1'
@@ -134,19 +141,25 @@ setGeneric("CNV.bin", function(object, ...) {
 
 #' @rdname CNV.bin
 setMethod("CNV.bin", signature(object = "CNV.analysis"), function(object) {
-    if (length(object@fit) == 0) 
-        stop("fit unavailable, run CNV.fit")
-    
-    o1 <- as.matrix(findOverlaps(query = object@anno@bins, subject = object@anno@probes))
-    o2 <- data.frame(bin = names(object@anno@bins)[o1[, "queryHits"]], 
-        probe = names(object@anno@probes)[o1[, "subjectHits"]], stringsAsFactors = FALSE)
-    
-    object@bin$ratio <- sapply(split(object@fit$ratio[o2[, "probe"]], o2[, 
-        "bin"]), median, na.rm = TRUE)[names(object@anno@bins)]
-    object@bin$shift <- optim(0, function(s) median(abs(object@bin$ratio - 
-        s), na.rm = TRUE), method = "Brent", lower = -100, upper = 100)$par
-    
-    return(object)
+  if (length(object@fit) == 0)
+    stop("fit unavailable, run CNV.fit")
+
+  o1 <- as.matrix(findOverlaps(query = object@anno@bins, subject = object@anno@probes))
+  o2 <- data.frame(bin = names(object@anno@bins)[o1[, "queryHits"]],
+                   probe = names(object@anno@probes)[o1[, "subjectHits"]], stringsAsFactors = FALSE)
+
+  object@bin$ratio <- vector(mode = "list", length = ncol(object@fit$ratio))
+  object@bin$shift <- as.numeric()
+  for (i in 1:ncol(object@fit$ratio)) {
+    object@bin$ratio[[i]] <- sapply(split(object@fit$ratio[o2[, "probe"],i], o2[,
+                                                                                "bin"]), median, na.rm = TRUE)[names(object@anno@bins)]
+
+    object@bin$shift <- c(object@bin$shift, optim(0, function(s) median(abs(object@bin$ratio[[i]] -
+                                                                              s), na.rm = TRUE), method = "Brent", lower = -100, upper = 100)$par)
+  }
+  names(object@bin$shift) <- colnames(object@fit$ratio)
+  names(object@bin$ratio) <- colnames(object@fit$ratio)
+  return(object)
 })
 
 
@@ -163,22 +176,22 @@ setMethod("CNV.bin", signature(object = "CNV.analysis"), function(object) {
 #' d <- CNV.load(MsetEx)
 #' data(detail_regions)
 #' anno <- CNV.create_anno(detail_regions = detail_regions)
-#' 
+#'
 #' # create object
 #' x <- CNV.fit(query = d['GroupB_1'], ref = d[c('GroupA_1', 'GroupA_2', 'GroupA_3')], anno)
-#' 
+#'
 #' # modify object
 #' x <- CNV.bin(x)
 #' x <- CNV.detail(x)
 #' #x <- CNV.segment(x)
-#' 
+#'
 #' # general information
 #' x
 #' show(x)
-#' 
+#'
 #' # coefficients of linear regression
 #' coef(x)
-#' 
+#'
 #' # show or replace sample name
 #' names(x)
 #' names(x) <- 'Sample 1'
@@ -190,23 +203,29 @@ setGeneric("CNV.detail", function(object, ...) {
 
 #' @rdname CNV.detail
 setMethod("CNV.detail", signature(object = "CNV.analysis"), function(object) {
-    if (length(object@fit) == 0) 
-        stop("fit unavailable, run CNV.fit")
-    # if(length(object@bin) == 0) stop('bin unavailable, run CNV.bin')
-    
-    if (length(object@anno@detail) == 0) {
-        message("no detail regions provided, define using CNV.create_anno")
-    } else {
-        d1 <- as.matrix(findOverlaps(query = object@anno@detail, subject = object@anno@probes))
-        d2 <- data.frame(detail = values(object@anno@detail)$name[d1[, 
-            "queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]), 
-            stringsAsFactors = FALSE)
-        
-        object@detail$ratio <- sapply(split(object@fit$ratio[d2[, "probe"]], 
-            d2[, "detail"]), median, na.rm = TRUE)[values(object@anno@detail)$name]
-        object@detail$probes <- table(d2[, 1])[values(object@anno@detail)$name]
+  if (length(object@fit) == 0)
+    stop("fit unavailable, run CNV.fit")
+  # if(length(object@bin) == 0) stop('bin unavailable, run CNV.bin')
+
+  if (length(object@anno@detail) == 0) {
+    message("no detail regions provided, define using CNV.create_anno")
+  } else {
+    d1 <- as.matrix(findOverlaps(query = object@anno@detail, subject = object@anno@probes))
+    d2 <- data.frame(detail = values(object@anno@detail)$name[d1[,
+                                                                 "queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),
+                     stringsAsFactors = FALSE)
+
+
+    object@detail$ratio <- vector(mode = "list", length = ncol(object@fit$ratio))
+    for (i in 1:ncol(object@fit$ratio)) {
+      object@detail$ratio [[i]]<- sapply(split(object@fit$ratio[d2[, "probe"],i],
+                                               d2[, "detail"]), median, na.rm = TRUE)[values(object@anno@detail)$name]
     }
-    return(object)
+    names(object@detail$ratio) <- colnames(object@fit$ratio)
+    object@detail$probes <- table(d2[, 1])[values(object@anno@detail)$name]
+
+  }
+  return(object)
 })
 
 
@@ -224,7 +243,7 @@ NULL
 #' @param verbose See details. Defaults to 0.
 #' @param ... Additional parameters supplied to the \code{segment} method of the \code{DNAcopy} package.
 #' @return \code{CNV.analysis} object.
-#' @details This method is a wrapper of the CNA, segment, segments.summary and segments.p methods of the DNAcopy package. Please refer to the respective man pages for more detailed information. The default parameters of \code{CNV.segment} override some of the default parameters of segment and are optimized for 450k data CNV analysis. 
+#' @details This method is a wrapper of the CNA, segment, segments.summary and segments.p methods of the DNAcopy package. Please refer to the respective man pages for more detailed information. The default parameters of \code{CNV.segment} override some of the default parameters of segment and are optimized for 450k data CNV analysis.
 #' @examples
 #' # prepare
 #' library(minfiData)
@@ -232,22 +251,22 @@ NULL
 #' d <- CNV.load(MsetEx)
 #' data(detail_regions)
 #' anno <- CNV.create_anno(detail_regions = detail_regions)
-#' 
+#'
 #' # create object
 #' x <- CNV.fit(query = d['GroupB_1'], ref = d[c('GroupA_1', 'GroupA_2', 'GroupA_3')], anno)
-#' 
+#'
 #' # modify object
 #' x <- CNV.bin(x)
 #' x <- CNV.detail(x)
 #' x <- CNV.segment(x)
-#' 
+#'
 #' # general information
 #' x
 #' show(x)
-#' 
+#'
 #' # coefficients of linear regression
 #' coef(x)
-#' 
+#'
 #' # show or replace sample name
 #' names(x)
 #' names(x) <- 'Sample 1'
@@ -258,31 +277,38 @@ setGeneric("CNV.segment", function(object, ...) {
 })
 
 #' @rdname CNV.segment
-setMethod("CNV.segment", signature(object = "CNV.analysis"), function(object, 
-    alpha = 0.001, nperm = 50000, min.width = 5, undo.splits = "sdundo", 
-    undo.SD = 2.2, verbose = 0, ...) {
-    # if(length(object@fit) == 0) stop('fit unavailable, run CNV.fit')
-    if (length(object@bin) == 0) 
-        stop("bin unavailable, run CNV.bin")
-    # if(length(object@detail) == 0) stop('bin unavailable, run
-    # CNV.detail')
-    
-    a1 <- formals()
-    a2 <- as.list(match.call())[-1]
-    object@seg$args <- as.list(sapply(setdiff(unique(names(c(a1, a2))), 
-        c("object", "verbose")), function(an) if (is.element(an, names(a2))) 
-        a2[[an]] else a1[[an]], simplify = FALSE))
-    
-    x1 <- DNAcopy::CNA(genomdat = object@bin$ratio[names(object@anno@bins)], 
-        chrom = as.vector(seqnames(object@anno@bins)), maploc = values(object@anno@bins)$midpoint, 
-        data.type = "logratio", sampleid = "sampleid")
-    x2 <- DNAcopy::segment(x = x1, verbose = verbose, min.width = min.width, 
-        nperm = nperm, alpha = alpha, undo.splits = undo.splits, undo.SD = undo.SD, 
-        ...)
-    object@seg$summary <- DNAcopy::segments.summary(x2)
-    object@seg$summary$chrom <- as.vector(object@seg$summary$chrom)  # DNAcopy will factor chrom names. is there another way? 
-    object@seg$p <- DNAcopy::segments.p(x2)
-    object@seg$p$chrom <- as.vector(object@seg$p$chrom)
-    
-    return(object)
-}) 
+setMethod("CNV.segment", signature(object = "CNV.analysis"), function(object,
+                                                                      alpha = 0.001, nperm = 50000, min.width = 5, undo.splits = "sdundo",
+                                                                      undo.SD = 2.2, verbose = 0, ...) {
+  # if(length(object@fit) == 0) stop('fit unavailable, run CNV.fit')
+  if (length(object@bin) == 0)
+    stop("bin unavailable, run CNV.bin")
+  # if(length(object@detail) == 0) stop('bin unavailable, run
+  # CNV.detail')
+
+  a1 <- formals()
+  a2 <- as.list(match.call())[-1]
+  object@seg$args <- as.list(sapply(setdiff(unique(names(c(a1, a2))),
+                                            c("object", "verbose")), function(an) if (is.element(an, names(a2)))
+                                              a2[[an]] else a1[[an]], simplify = FALSE))
+
+  object@seg$summary <- vector(mode = "list", length = ncol(object@fit$ratio))
+  object@seg$p <- vector(mode = "list", length = ncol(object@fit$ratio))
+  for (i in 1:ncol(object@fit$ratio)) {
+    x1 <- DNAcopy::CNA(genomdat = object@bin$ratio[[i]][names(object@anno@bins)],
+                       chrom = as.vector(seqnames(object@anno@bins)), maploc = values(object@anno@bins)$midpoint,
+                       data.type = "logratio", sampleid = "sampleid")
+    x2 <- DNAcopy::segment(x = x1, verbose = verbose, min.width = min.width,
+                           nperm = nperm, alpha = alpha, undo.splits = undo.splits, undo.SD = undo.SD,
+                           ...)
+    object@seg$summary[[i]] <- DNAcopy::segments.summary(x2)
+    object@seg$summary[[i]]$chrom <- as.vector(object@seg$summary[[i]]$chrom)
+    object@seg$summary[[i]]$ID <- colnames(object@fit$ratio)[i]
+    object@seg$p[[i]] <- DNAcopy::segments.p(x2)
+    object@seg$p[[i]]$chrom <- as.vector(object@seg$p[[i]]$chrom)
+  }
+  names(object@seg$summary) <- colnames(object@fit$ratio)
+  names(object@seg$p) <- colnames(object@fit$ratio)
+  return(object)
+})
+
