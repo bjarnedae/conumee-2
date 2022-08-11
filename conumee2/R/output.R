@@ -53,7 +53,7 @@
 #' CNV.write(x, what = 'detail')
 #' CNV.write(x, what = 'bins')
 #' CNV.write(x, what = 'probes')
-#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}
+#' @author Volker Hovestadt, Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.genomeplot", function(object, ...) {
     standardGeneric("CNV.genomeplot")
