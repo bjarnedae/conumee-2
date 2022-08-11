@@ -16,20 +16,19 @@ NULL
 #' @param bin_minprobes numeric. Minimum number of probes per bin. Bins are interatively merged with neighboring bin until minimum number is reached.
 #' @param bin_minsize numeric. Minimum size of a bin.
 #' @param bin_maxsize numeric. Maximum size of a bin. Merged bins that are larger are filtered out.
-#' @param array_type character. One of \code{450k}, \code{EPIC}, or \code{overlap}. Defaults to \code{450k}.
-#' @param chrXY logical. Should chromosome X and Y be included in the analysis?
+#' @param array_type character. One of \code{450k}, \code{EPIC}, \code{mouse} or \code{overlap}. Defaults to \code{450k}.
 #' @param exclude_regions GRanges object or path to bed file containing genomic regions to be excluded.
 #' @param detail_regions GRanges object or path to bed file containing genomic regions to be examined in detail.
 #' @return \code{CNV.anno} object.
-#' @details This function collects all annotations required for CNV analysis using Illumina 450k or EPIC arrays. The output \code{CNV.anno} object is not editable. Rerun \code{CNV.create_anno} to change parameters.
+#' @details This function collects all annotations required for CNV analysis using Illumina 450k, EPIC or Mouse arrays. The output \code{CNV.anno} object is not editable. Rerun \code{CNV.create_anno} to change parameters.
 #' @examples
 #' # create annotation object
-#' anno <- CNV.create_anno()
+#' anno <- CNV.create_anno(array_type = "450k", detail_regions = detail_regions, exclude_regions = exclude_regions)
 #' anno
-#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}
+#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}, Bjarne Daenekas
 #' @export
 CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize = 5e+06,
-    array_type = "450k", chrXY = FALSE, exclude_regions = NULL, detail_regions = NULL) {
+    array_type = "450k", exclude_regions = NULL, detail_regions = NULL) {
     object <- new("CNV.anno")
     object@date <- date()
 
@@ -46,34 +45,30 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
       stop("array_type must be on of 450k, EPIC, mouse or overlap")
     }
 
-    if (chrXY) {
-        object@genome <- data.frame(chr = paste("chr", c(1:22, "X", "Y"),
-            sep = ""), stringsAsFactors = FALSE)
-    }
   #mouse beginning
     if( array_type == "mouse") {
-      object@genome <- data.frame(chr = paste("chr", c(1:19,"X","Y"), sep = ""),
+      object@genome <- data.frame(chr = paste("chr", c(1:19), sep = ""),
                                   stringsAsFactors = FALSE)
 
       rownames(object@genome) <- object@genome$chr
 
-      #data(c("MouseMethylation_probes.rda", "tbl.chromInfo_mouse.rda", "gap_mouse.rda"))
+      #data(mouse_annotation.rda)
 
-      message("using genome annotations from UCSC")
+      message("using mm10 genome annotations from UCSC")
 
-      object@genome$size <- tbl.chromInfo_mouse$size
+      object@genome$size <- mouse_annotation[[1]]$size[-c(20,21)]
 
-      tbl.gap <- gap[is.element(gap$chrom, object@genome$chr),]
+      tbl.gap <- mouse_annotation[[2]][is.element(mouse_annotation[[2]]$chrom, object@genome$chr),]
 
       object@gap <- sort(GRanges(as.vector(tbl.gap$chrom), IRanges(tbl.gap$chromStart + 1,
                          tbl.gap$chromEnd), seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
 
 
-      mouse_probes <- GRanges(as.vector(paste("chr",MouseMethylation_probes$chr, sep = "")),
-                              IRanges(start = MouseMethylation_probes$location,
-                                      end = MouseMethylation_probes$location))
+      mouse_probes <- GRanges(as.vector(paste("chr",mouse_annotation[[3]]$chr, sep = "")),
+                              IRanges(start = mouse_annotation[[3]]$location,
+                                      end = mouse_annotation[[3]]$location))
 
-      names(mouse_probes) <- MouseMethylation_probes$name
+      names(mouse_probes) <- mouse_annotation[[3]]$name
 
 
       # CpG probes only
@@ -86,6 +81,57 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
       object@probes <- sort(GRanges(as.vector(seqnames(mouse_probes)), ranges(mouse_probes),
                                 seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
+      message(" - ", length(object@probes), " probes used")
+
+      if (!is.null(exclude_regions)) {
+        message("importing regions to exclude from analysis")
+        if (class(exclude_regions) == "GRanges") {
+          object@exclude <- GRanges(as.vector(seqnames(exclude_regions)),
+                                    ranges(exclude_regions), seqinfo = Seqinfo(object@genome$chr,
+                                                                               object@genome$size))
+          values(object@exclude) <- values(exclude_regions)
+          object@exclude <- sort(object@exclude)
+        } else {
+          object@exclude <- sort(rtracklayer::import(exclude_regions,
+                                                     seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
+        }
+      } else {
+        object@exclude <- GRanges(seqinfo = Seqinfo(object@genome$chr,
+                                                    object@genome$size))
+      }
+
+      if (!is.null(detail_regions)) {
+        message("importing regions for detailed analysis")
+        if (class(detail_regions) == "GRanges") {
+          object@detail <- GRanges(as.vector(seqnames(detail_regions)),
+                                   ranges(detail_regions), seqinfo = Seqinfo(object@genome$chr,
+                                                                             object@genome$size))
+          if (any(grepl("name", names(values(detail_regions))))) {
+            values(object@detail)$name <- values(detail_regions)[[grep("name",
+                                                                       names(values(detail_regions)))[1]]]
+          }
+          if (any(grepl("IRanges", sapply(values(detail_regions), class)))) {
+            values(object@detail)$thick <- values(detail_regions)[[grep("IRanges",
+                                                                        sapply(values(detail_regions), class))[1]]]
+          }
+          object@detail <- sort(object@detail)
+        } else {
+          object@detail <- sort(rtracklayer::import(detail_regions, seqinfo = Seqinfo(object@genome$chr,
+                                                                                      object@genome$size)))
+        }
+        if (!is.element("name", names(values(object@detail)))) {
+          stop("detailed region bed file must contain name column.")
+        }
+        if (!all(table(values(object@detail)$name) == 1)) {
+          stop("detailed region names must be unique.")
+        }
+      } else {
+        object@detail <- GRanges(seqinfo = Seqinfo(object@genome$chr, object@genome$size))
+      }
+      if (!is.element("thick", names(values(object@detail)))) {
+        values(object@detail)$thick <- resize(ranges(object@detail), fix = "center",
+                                              1e+06)
+      }
 
       message("creating bins")
       anno.tile <- CNV.create_bins(hg19.anno = object@genome, bin_minsize = bin_minsize,
@@ -107,7 +153,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
     rownames(object@genome) <- object@genome$chr
 
-    message("using genome annotations from UCSC")
+    message("using hg19 genome annotations from UCSC")
     tbl.chromInfo <- tbl_ucsc$chromInfo[match(object@genome$chr, tbl_ucsc$chromInfo$chrom),
         "size"]
     object@genome$size <- tbl.chromInfo
@@ -310,7 +356,7 @@ CNV.merge_bins_mice <- function(hg19.anno, hg19.tile, bin_minprobes = 20, hg19.p
 
   hg19.tile.df.bin <- do.call(rbind, lapply(split(hg19.tile.df, hg19.tile.df$seqnames),
                                             function(mdf) {
-                                              while (min(mdf$probes) < bin_minprobes) {
+                                              while (suppressWarnings(min(mdf$probes)) < bin_minprobes) {
                                                 mw <- which(mdf$probes == min(mdf$probes))[1]
                                                 mwn <- NA
                                                 mwns <- Inf
@@ -362,3 +408,4 @@ CNV.merge_bins_mice <- function(hg19.anno, hg19.tile, bin_minprobes = 20, hg19.p
                                 sep = "-")
   return(hg19.tile.bin)
 }
+

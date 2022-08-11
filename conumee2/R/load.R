@@ -1,4 +1,5 @@
 ##### LOADING methods #####
+#' @import illuminaio
 
 #' CNV.load
 #' @description Prepare combined intensities from various input objects.
@@ -21,82 +22,82 @@ setGeneric("CNV.load", function(input, ...) {
 #' @rdname CNV.load
 setMethod("CNV.load", signature(input = "MethylSet"), function(input, names = NULL) {
     object <- new("CNV.data")
-    
+
     object@intensity <- as.data.frame(minfi::getMeth(input) + minfi::getUnmeth(input))
-    
-    input.names <- grep("Name", setdiff(colnames(minfi::pData(input)), 
+
+    input.names <- grep("Name", setdiff(colnames(minfi::pData(input)),
         c("Basename", "filenames")), ignore.case = TRUE)
-    if (length(input.names) > 0) 
-        names(object) <- minfi::pData(input)[, grep("name", setdiff(colnames(minfi::pData(input)), 
+    if (length(input.names) > 0)
+        names(object) <- minfi::pData(input)[, grep("name", setdiff(colnames(minfi::pData(input)),
             c("Basename", "filenames")), ignore.case = TRUE)[1]]
-    if (!is.null(names)) 
+    if (!is.null(names))
         names(object) <- names
-    
+
     object <- CNV.check(object)
-    
+
     return(object)
 })
 
 #' @rdname CNV.load
-setMethod("CNV.load", signature(input = "data.frame"), function(input, 
+setMethod("CNV.load", signature(input = "data.frame"), function(input,
     names = NULL) {
     object <- new("CNV.data")
     object@date <- date()
-    
-    if (any(grepl("TargetID", colnames(input)))) 
+
+    if (any(grepl("TargetID", colnames(input))))
         rownames(input) <- input[, "TargetID"]
-    if (any(grepl("ID_REF", colnames(input)))) 
+    if (any(grepl("ID_REF", colnames(input))))
         rownames(input) <- input[, "ID_REF"]
-    if (is.null(rownames(input))) 
+    if (is.null(rownames(input)))
         stop("intensities not given for all probes.")
-    
+
     if (any(grepl("intensity", colnames(input), ignore.case = TRUE))) {
         input.i <- grep("intensity", colnames(input), ignore.case = TRUE)
-        input.n <- sapply(strsplit(colnames(input), "\\.", colnames(input))[input.i], 
-            function(x) paste(x[!grepl("intensity", x, ignore.case = TRUE)], 
+        input.n <- sapply(strsplit(colnames(input), "\\.", colnames(input))[input.i],
+            function(x) paste(x[!grepl("intensity", x, ignore.case = TRUE)],
                 collapse = "."))
         object@intensity <- as.data.frame(input[, input.i])
         colnames(object@intensity) <- make.names(input.n, unique = TRUE)
     } else if (any(grepl("signal", colnames(input), ignore.case = TRUE))) {
         input.i <- grep("signal", colnames(input), ignore.case = TRUE)
-        input.n <- sapply(strsplit(colnames(input), "\\.", colnames(input))[input.i], 
-            function(x) paste(x[!grepl("signal|methylated", x, ignore.case = TRUE)], 
+        input.n <- sapply(strsplit(colnames(input), "\\.", colnames(input))[input.i],
+            function(x) paste(x[!grepl("signal|methylated", x, ignore.case = TRUE)],
                 collapse = "."))
-        if (!all(input.n[seq(1, length(input.i), 2)] == input.n[seq(2, 
-            length(input.i), 2)])) 
+        if (!all(input.n[seq(1, length(input.i), 2)] == input.n[seq(2,
+            length(input.i), 2)]))
             stop("names of both signal columns do not match.")
-        object@intensity <- as.data.frame(input[, input.i[seq(1, length(input.i), 
+        object@intensity <- as.data.frame(input[, input.i[seq(1, length(input.i),
             2)]] + input[, input.i[seq(2, length(input.i), 2)]])
-        colnames(object@intensity) <- make.names(input.n[seq(1, length(input.i), 
+        colnames(object@intensity) <- make.names(input.n[seq(1, length(input.i),
             2)], unique = TRUE)
     } else {
         object@intensity <- as.data.frame(input)
     }
-    if (!is.null(names)) 
+    if (!is.null(names))
         names(object) <- names
-    
+
     object <- CNV.check(object)
-    
+
     return(object)
 })
 
 #' @rdname CNV.load
-setMethod("CNV.load", signature(input = "matrix"), function(input, names = NULL) {
+setMethod("CNV.load", signature(input = "matrix"), function(input, names = NULL,...) {
     CNV.load(as.data.frame(input), anno, names)
 })
 
 #' @rdname CNV.load
 setMethod("CNV.load", signature(input = "numeric"), function(input, names = NULL) {
     object <- new("CNV.data")
-    
-    if (is.null(names(input))) 
+
+    if (is.null(names(input)))
         stop("intensities not given for all probes.")
     object@intensity <- data.frame(sampleid = input)
-    if (!is.null(names)) 
+    if (!is.null(names))
         names(object) <- names
-    
+
     object <- CNV.check(object)
-    
+
     return(object)
 })
 
@@ -117,14 +118,14 @@ setMethod("CNV.check", signature(object = "CNV.data"), function(object) {
         warning("some intensities are NA, now set to 1.")
         object@intensity[is.na(object@intensity)] <- 1
     }
-    if (any(object@intensity < 0)) 
+    if (any(object@intensity < 0))
         warning("some intensities are smaller than 0, now set to 1.")
     object@intensity[object@intensity < 1] <- 1
-    if (any(colMeans(object@intensity) < 5000)) 
+    if (any(colMeans(object@intensity) < 5000))
         warning("intensities are abnormally low (< 5000).")
-    if (any(colMeans(object@intensity) > 50000)) 
+    if (any(colMeans(object@intensity) > 50000))
         warning("intensities are abnormally high (> 50000).")
-    
+
     return(object)
 })
 
@@ -140,14 +141,14 @@ setMethod("CNV.check", signature(object = "CNV.data"), function(object) {
 #' @author Volker Hovestadt \email{conumee@@hovestadt.bio}
 #' @export
 read.450k.url <- function(url = NULL, idat = NULL) {
-    if (is.null(url)) 
+    if (is.null(url))
         url <- "https://github.com/hovestadt/conumeeData/raw/master/"
-    if (is.null(idat)) 
+    if (is.null(idat))
         idat <- c("6042324037_R05C02", "6042324037_R06C01")
     tmp <- paste0(tempdir(), .Platform$file.sep)
-    if (!grepl("/$", url)) 
+    if (!grepl("/$", url))
         url <- paste0(url, "/")
-    if (!any(grepl("_Grn.idat", idat))) 
+    if (!any(grepl("_Grn.idat", idat)))
         idat <- unlist(lapply(idat, paste0, c("_Grn.idat", "_Red.idat")))
     for (i in idat) .curl(url = paste0(url, i), file = paste0(tmp, i))
     idatRG <- read.metharray.exp(base = tmp)
@@ -157,23 +158,69 @@ read.450k.url <- function(url = NULL, idat = NULL) {
 
 .curl <- function(url, file, verbose = TRUE) {
     if (.Platform$OS.type == "unix") {
-        if (!RCurl::url.exists(url)) 
+        if (!RCurl::url.exists(url))
             stop("url does not exist.")
     } else {
-        if (!RCurl::url.exists(url, .opts = list(ssl.verifypeer = FALSE))) 
+        if (!RCurl::url.exists(url, .opts = list(ssl.verifypeer = FALSE)))
             stop("url does not exist.")
     }
-    if (verbose) 
+    if (verbose)
         message("downloading ", tail(strsplit(url, "/")[[1]], 1), appendLF = FALSE)
     f <- RCurl::CFILE(file, mode = "wb")
     if (.Platform$OS.type == "unix") {
         r <- RCurl::curlPerform(url = url, writedata = f@ref, noprogress = TRUE,
                                 .opts = list(followlocation = TRUE))
     } else {
-        r <- RCurl::curlPerform(url = url, writedata = f@ref, noprogress = TRUE, 
+        r <- RCurl::curlPerform(url = url, writedata = f@ref, noprogress = TRUE,
                                 .opts = list(followlocation = TRUE, ssl.verifypeer = FALSE))
     }
     RCurl::close(f)
-    if (verbose) 
+    if (verbose)
         message(" - done.")
-} 
+}
+
+
+#' CNV.import
+#' @description Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting matrix for \code{CNV.load}.
+#' @param directory Specify the folder that stores the .idat-Files.
+#' @param sample_sheet dataframe. Provide a sample sheet with at least three columns: \code{Sample_Name}, \code{Sentrix_ID} and \code{Sentrix_Position}. The spelling of the colnames must be exactly as shown.
+#' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
+#' @return \code{dataframe} object.
+#' @details This method loads the unmethylated and methylated signal intensity for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting matrix should be used for \code{CNV.load}
+#' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
+#' @export
+setGeneric("CNV.import", function(directory, sample_sheet, ...) {
+  standardGeneric("CNV.import")
+})
+
+#' @rdname CNV.import
+setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.frame"),
+          function(directory = getwd(), sample_sheet = NULL) {
+           if(is.null(sample_sheet)){
+             stop("please provide a sample sheet")
+           }
+
+            object <- new("data.frame")
+          #data("CNV.import_mouse_data.rda")
+
+            lf <- list.files(directory, pattern=".idat$", full.names = TRUE)
+
+
+            object <- do.call(cbind, lapply(sample_sheet$Sample_Name, function(i) {
+              message(i)
+              f <- lf[grepl(paste0(sample_sheet[match(i, sample_sheet$Sample_Name), "Sentrix_ID"], "_", sample_sheet[match(i, sample_sheet$Sample_Name), "Sentrix_Position"], "_Grn"), lf)]
+              g <- readIDAT(f)[["Quants"]]
+              r <- readIDAT(sub("_Grn", "_Red", f))[["Quants"]]
+              t1g <- g[CNV.import_mouse_data[["type1g"]]$AddressA_ID, "Mean", drop = FALSE] + g[CNV.import_mouse_data[["type1g"]]$AddressB_ID, "Mean"]
+              t1r <- r[CNV.import_mouse_data[["type1r"]]$AddressA_ID, "Mean", drop = FALSE] + r[CNV.import_mouse_data[["type1r"]]$AddressB_ID, "Mean"]
+              t2 <- g[CNV.import_mouse_data[["type2"]]$AddressA_ID, "Mean", drop = FALSE] + r[CNV.import_mouse_data[["type2"]]$AddressA_ID, "Mean"]
+              names(t1g) <- CNV.import_mouse_data[["type1g"]]$Name
+              names(t1r) <- CNV.import_mouse_data[["type1r"]]$Name
+              names(t2) <- CNV.import_mouse_data[["type2"]]$Name
+              c(t1g, t1r, t2)
+            }))
+            colnames(object) <- sample_sheet$Sample_Name
+            object <- as.data.frame(object)
+
+          })
+
