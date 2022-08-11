@@ -1,5 +1,6 @@
 ##### LOADING methods #####
 #' @import illuminaio
+NULL
 
 #' CNV.load
 #' @description Prepare combined intensities from various input objects.

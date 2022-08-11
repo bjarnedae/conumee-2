@@ -1,13 +1,13 @@
-Package: conumee
+Package: conumee 2
 Title: Enhanced copy-number variation analysis using Illumina DNA methylation
     arrays
-Version: 1.6.0
-Author: Volker Hovestadt, Marc Zapatka
+Version: 2.0
+Author: Volker Hovestadt, Marc Zapatka, Bjarne Daenekas
 Maintainer: Volker Hovestadt <conumee@hovestadt.bio>
 Address: Division of Molecular Genetics, German Cancer Research Center (DKFZ),
     Heidelberg, Germany
 Description: This package contains a set of processing and plotting methods
-    for performing copy-number variation (CNV) analysis using Illumina 450k or EPIC
+    for performing copy-number variation (CNV) analysis using Illumina 450k, EPIC or Mouse
     methylation arrays.
 Imports:
     methods,
@@ -31,6 +31,7 @@ Suggests:
     minfiData,
     CopyNumber450kData,
     RCurl
+Encoding: UTF-8
 License: GPL (>= 2)
 LazyData: false
 Collate:
@@ -43,4 +44,4 @@ Collate:
 biocViews: CopyNumberVariation, DNAMethylation, MethylationArray, Microarray,
     Normalization, Preprocessing, QualityControl, Software
 VignetteBuilder: knitr
-RoxygenNote: 5.0.1
+RoxygenNote: 7.1.2

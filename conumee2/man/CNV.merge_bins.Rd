@@ -4,8 +4,14 @@
 \alias{CNV.merge_bins}
 \title{CNV.merge_bins}
 \usage{
-CNV.merge_bins(hg19.anno, hg19.tile, bin_minprobes = 20, hg19.probes,
-  bin_maxsize = 5e+06, verbose = FALSE)
+CNV.merge_bins(
+  hg19.anno,
+  hg19.tile,
+  bin_minprobes = 20,
+  hg19.probes,
+  bin_maxsize = 5e+06,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{hg19.anno}{foo}
@@ -26,4 +32,3 @@ CNV.merge_bins(hg19.anno, hg19.tile, bin_minprobes = 20, hg19.probes,
 \description{
 Merge bins containing less than the defined number probes with neighboring bin containing fewer probes.
 }
-
