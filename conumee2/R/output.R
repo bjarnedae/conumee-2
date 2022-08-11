@@ -873,7 +873,7 @@ setMethod("CNV.summaryplot", signature(object = "CNV.analysis"), function(object
 #' @param what character. This should be (an unambiguous abbreviation of) one of \code{'probes'}, \code{'bins'}, \code{'detail'}, \code{'segments'}, \code{gistic} or \code{overview}. Defaults to \code{'segments'}.
 #' @param threshold numeric. Threshold for determining the copy number state. Defaults to \code{0.1}. See Description for details.
 #' @param ... Additional parameters (\code{CNV.write} generic, currently not used).
-#' @details  Function shows the output of the CNV analysis with conumee. To use the results as input for GISTIC choose \code{what = 'gistic'}. To assign the resulting segments to their copy number state and their size (focal, arm-level or whole chromosome) choose \code{what = 'overview'}. The threshold for the log2-ratio to identify gains or losses is \code{0.1} by default.
+#' @details  Function shows the output of the CNV analysis with conumee 2. To use the results as input for GISTIC choose \code{what = 'gistic'}. To assign the resulting segments to their copy number state and their size (focal, arm-level or whole chromosome) choose \code{what = 'overview'}. The threshold for the log2-ratio to identify gains or losses is \code{0.1} by default.
 #' @examples
 #' # prepare
 #' library(minfiData)

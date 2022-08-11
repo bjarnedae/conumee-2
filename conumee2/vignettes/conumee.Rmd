@@ -1,5 +1,5 @@
 ---
-title: "The conumee vignette"
+title: "The conumee 2 vignette"
 author: "Volker Hovestadt, Marc Zapatka (Division of Molecular Genetics, German Cancer Research Center, Heidelberg, Germany)"
 date: "`r Sys.Date()`"
 output:
@@ -9,7 +9,7 @@ output:
 bibliography: conumee.bib
 csl: biomed-central.csl
 vignette: >
-  %\VignetteIndexEntry{conumee}
+  %\VignetteIndexEntry{conumee 2}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
