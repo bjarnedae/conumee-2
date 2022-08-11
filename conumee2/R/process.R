@@ -204,7 +204,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
 #' # show or replace sample name
 #' names(x)
 #' names(x) <- 'Sample 1'
-#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}
+#' @author Volker Hovestadt, Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.bin", function(object, ...) {
     standardGeneric("CNV.bin")
@@ -269,7 +269,7 @@ setMethod("CNV.bin", signature(object = "CNV.analysis"), function(object) {
 #' # show or replace sample name
 #' names(x)
 #' names(x) <- 'Sample 1'
-#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}
+#' @author Volker Hovestadt, Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.detail", function(object, ...) {
     standardGeneric("CNV.detail")
@@ -344,7 +344,7 @@ NULL
 #' # show or replace sample name
 #' names(x)
 #' names(x) <- 'Sample 1'
-#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}
+#' @author Volker Hovestadt, Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.segment", function(object, ...) {
     standardGeneric("CNV.segment")

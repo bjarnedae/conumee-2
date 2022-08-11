@@ -201,7 +201,7 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
            }
 
             object <- new("data.frame")
-          #data("CNV.import_mouse_data.rda")
+            data("CNV.import_mouse_data")
 
             lf <- list.files(directory, pattern=".idat$", full.names = TRUE)
 

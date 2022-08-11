@@ -11,17 +11,20 @@
 }
 
 #' CNV.genomeplot
-#' @description Create CNV plot for the whole genome or chromosomes.
+#' @description Create CNV plot for the whole genome or chromosomes. If the \code{CNV.analysis} object holds the information for multiple samples, the plots get either loaded individually in the graphical output or directly saved as .pdf or .png files.
 #' @param object \code{CNV.analysis} object.
-#' @param chr character vector. Which chromomsomes to plot. Defaults to \code{'all'}.
-#' @param chrX logical. Plot values for chrX? Defaults to \code{TRUE}. Set \code{CNV.create_anno(chrXY = FALSE)} if chrX and Y should not be included at all.
-#' @param chrY logical. Plot values for chrY? Defaults to \code{TRUE}.
+#' @param chr character vector. Which chromosomes to plot. Defaults to \code{'all'}.
 #' @param centromere logical. Show dashed lines at centromeres? Defaults to \code{TRUE}.
 #' @param detail logical. If available, include labels of detail regions? Defaults to \code{TRUE}.
-#' @param main character. Title of the plot. Defaults to sample name.
+#' @param main character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length as the number of samples.
 #' @param ylim numeric vector. The y limits of the plot. Defaults to \code{c(-1.25, 1.25)}.
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
 #' @param cols character vector. Colors to use for plotting intensity levels of bins. Centered around 0. Defaults to \code{c('red', 'red', 'lightgrey', 'green', 'green')}.
+#' @param directory character. Export directory for saving the files
+#' @param output character. Choose between \code{pdf} and \code{png}. Defaults to \code{NULL}
+#' @param width numeric. Width in inches of the saved files. Defaults to \code{12}.
+#' @param height numeric. Height in inches of the saved files. Defaults to \code{8}
+#' @param res numeric. Resolution of the saved .png files. Defaults to \code{720}
 #' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
 #' @return \code{NULL}.
 #' @details This method provides the functionality for generating CNV plots for the whole genome or defined chromosomes. Bins are shown as dots, segments are shown as lines. See parameters for more information.
@@ -40,8 +43,10 @@
 #' # output plots
 #' CNV.genomeplot(x)
 #' CNV.genomeplot(x, chr = 'chr6')
+#' CNV.genomeplot(x, output = "pdf", directory = dir)
 #' CNV.detailplot(x, name = 'PTEN')
 #' CNV.detailplot_wrap(x)
+#' CNV.summaryplot(x)
 #'
 #' # output text files
 #' CNV.write(x, what = 'segments')
@@ -97,19 +102,17 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
      }
 
      chr.cumsum0 <- .cumsum0(object@anno@genome[chr, "size"], n = chr)
-     if (!chrX & is.element("chrX", names(chr.cumsum0)))
-       chr.cumsum0["chrX"] <- NA
-     if (!chrY & is.element("chrY", names(chr.cumsum0)))
-       chr.cumsum0["chrY"] <- NA
 
      plot(NA, xlim = c(0, sum(as.numeric(object@anno@genome[chr, "size"])) -
                          0), ylim = ylim, xaxs = "i", xaxt = "n", yaxt = "n", xlab = NA,
           ylab = NA, main = main[i])
      abline(v = .cumsum0(object@anno@genome[chr, "size"], right = TRUE),
             col = "grey")
-     if (centromere)
+     if (centromere) {
        abline(v = .cumsum0(object@anno@genome[chr, "size"]) + object@anno@genome[chr,
                                                                                  "pq"], col = "grey", lty = 2)
+     }
+
      axis(1, at = .cumsum0(object@anno@genome[chr, "size"]) + object@anno@genome[chr,
                                                                                  "size"]/2, labels = object@anno@genome[chr, "chr"], las = 2)
      if (all(ylim == c(-1.25, 1.25))) {
@@ -333,13 +336,19 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
 
 
 #' CNV.detailplot
-#' @description Create CNV plot for detail region.
+#' @description Create CNV plot for detail region. If the \code{CNV.analysis} object holds the information for multiple samples, the plots get either loaded individually in the graphical output or directly saved as .pdf or .png files.
 #' @param object \code{CNV.analysis} object.
 #' @param name character. Name of detail region to plot.
 #' @param yaxt character. Include y-axis? \code{'l'}: left, \code{'r'}: right, \code{'n'}: no. Defaults to \code{'l'}.
 #' @param ylim numeric vector. The y limits of the plot. Defaults to \code{c(-1.25, 1.25)}.
+#' @param directory character. Export directory for saving the files
+#' @param output character. Choose between \code{pdf} and \code{png}. Defaults to \code{NULL}
+#' @param width numeric. Width in inches of the saved files. Defaults to \code{12}.
+#' @param height numeric. Height in inches of the saved files. Defaults to \code{8}
+#' @param res numeric. Resolution of the saved .png files. Defaults to \code{720}
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
 #' @param cols character vector. Colors to use for plotting intensity levels of bins. Centered around 0. Defaults to \code{c('red', 'red', 'lightgrey', 'green', 'green')}.
+#' @param columns numeric. Needed for \code{detailplot_wrap}. Defaults to \code{NULL}. Do not manipulate.
 #' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
 #' @return \code{NULL}.
 #' @details This method provides the functionality for generating detail regions CNV plots. Probes are shown as dots, bins are shown as lines. See parameters for more information.
@@ -358,15 +367,16 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
 #' # output plots
 #' CNV.genomeplot(x)
 #' CNV.genomeplot(x, chr = 'chr6')
-#' CNV.detailplot(x, name = 'PTEN')
+#' CNV.detailplot(x, name = 'PTEN', output = "pdf", directory = dir)
 #' CNV.detailplot_wrap(x)
+#' CNV.summaryplot(x)
 #'
 #' # output text files
 #' CNV.write(x, what = 'segments')
 #' CNV.write(x, what = 'detail')
 #' CNV.write(x, what = 'bins')
 #' CNV.write(x, what = 'probes')
-#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}
+#' @author Volker Hovestadt, Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.detailplot", function(object, ...) {
     standardGeneric("CNV.detailplot")
@@ -564,10 +574,16 @@ setMethod("CNV.detailplot", signature(object = "CNV.analysis"),
 
 
 #' CNV.detailplot_wrap
-#' @description Create CNV plot for all detail regions.
+#' @description Create CNV plots for all detail regions. If the \code{CNV.analysis} object holds the information for multiple samples, the plots get either loaded individually in the graphical output or directly saved as .pdf or .png files.
 #' @param object \code{CNV.analysis} object.
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
-#' @param main character. Title of the plot. Defaults to sample name.
+#' #' @param directory character. Export directory for saving the files
+#' @param output character. Choose between \code{pdf} and \code{png}. Defaults to \code{NULL}
+#' @param width numeric. Width in inches of the saved files. Defaults to \code{12}.
+#' @param height numeric. Height in inches of the saved files. Defaults to \code{8}
+#' @param res numeric. Resolution of the saved .png files. Defaults to \code{720}
+#' @param main character. Used for \code{CNV.detailplot}. do not manipulate
+#' @param header character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length than the number of samples.
 #' @param ... Additional paramters supplied to \code{CNV.detailplot}.
 #' @return \code{NULL}.
 #' @details This method is a wrapper of the \code{CNV.detailplot} method to plot all detail regions.
@@ -588,13 +604,14 @@ setMethod("CNV.detailplot", signature(object = "CNV.analysis"),
 #' CNV.genomeplot(x, chr = 'chr6')
 #' CNV.detailplot(x, name = 'PTEN')
 #' CNV.detailplot_wrap(x)
+#' CNV.summaryplot(x)
 #'
 #' # output text files
 #' CNV.write(x, what = 'segments')
 #' CNV.write(x, what = 'detail')
 #' CNV.write(x, what = 'bins')
 #' CNV.write(x, what = 'probes')
-#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}
+#' @author Volker Hovestadt, Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.detailplot_wrap", function(object, ...) {
     standardGeneric("CNV.detailplot_wrap")
@@ -712,13 +729,47 @@ setMethod("CNV.detailplot_wrap", signature(object = "CNV.analysis"), function(ob
 })
 
 #' CNV.summaryplot
+#' @description Create a summaryplot that shows the CNVs in a all the query samples in the \code{CNV.analysis) object. The y axis shows the percentage of samples that exhibit a CNV at the genomic location shown on the x axis.
+#' @param object \code{CNV.analysis} object.
+#' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
+#' @param main character. Specify the title of the plot. Defaults to \code{NULL}.
+#' @param threshold numeric. Threshold for determining the copy number state. Defaults to \code{0.1}. See Details for details.
+#' @param ... Additional parameters (\code{CNV.write} generic, currently not used).
+#' @details This function creates a plot that illustrates the changes in copy number states within the set of query samples that are stored in the \code{CNV.analysis} object. The y axis is showing the percentage of samples that are exhibiting a CNV at the genomic location shown on the x axis. The threshold for the log2-ratio to identify gains or losses is \code{0.1} by default.
+#' @return \code{NULL}
+#' @examples
+#' # prepare
+#' library(minfiData)
+#' data(MsetEx)
+#' d <- CNV.load(MsetEx)
+#' data(detail_regions)
+#' anno <- CNV.create_anno(detail_regions = detail_regions)
+#'
+#' # create/modify object
+#' x <- CNV.segment(CNV.detail(CNV.bin(CNV.fit(query = d['GroupB_1'],
+#'     ref = d[c('GroupA_1', 'GroupA_2', 'GroupA_3')], anno))))
+#'
+#' # output plots
+#' CNV.genomeplot(x)
+#' CNV.genomeplot(x, chr = 'chr6')
+#' CNV.detailplot(x, name = 'PTEN')
+#' CNV.detailplot_wrap(x)
+#' CNV.summaryplot(x)
+#'
+#' # output text files
+#' CNV.write(x, what = 'segments')
+#' CNV.write(x, what = 'detail')
+#' CNV.write(x, what = 'bins')
+#' CNV.write(x, what = 'probes')
+#' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
+#' @export
 setGeneric("CNV.summaryplot", function(object, ...) {
   standardGeneric("CNV.summaryplot")
 })
 
 #' @rdname CNV.summaryplot
 setMethod("CNV.summaryplot", signature(object = "CNV.analysis"), function(object,
- set_par = TRUE, main = NULL, output = NULL, directory = getwd(), width = 12, height = 8, res = 720, threshold = 0.1,...) {
+ set_par = TRUE, main = NULL, threshold = 0.1,...) {
 
   if (set_par) {
     mfrow_original <- par()$mfrow
@@ -819,8 +870,10 @@ setMethod("CNV.summaryplot", signature(object = "CNV.analysis"), function(object
 #' @description Output CNV analysis results as table.
 #' @param object \code{CNV.analysis} object.
 #' @param file Path where output file should be written to. Defaults to \code{NULL}: No file is written, table is returned as data.frame object.
-#' @param what character. This should be (an unambiguous abbreviation of) one of \code{'probes'}, \code{'bins'}, \code{'detail'} or \code{'segments'}. Defaults to \code{'segments'}.
+#' @param what character. This should be (an unambiguous abbreviation of) one of \code{'probes'}, \code{'bins'}, \code{'detail'}, \code{'segments'}, \code{gistic} or \code{overview}. Defaults to \code{'segments'}.
+#' @param threshold numeric. Threshold for determining the copy number state. Defaults to \code{0.1}. See Description for details.
 #' @param ... Additional parameters (\code{CNV.write} generic, currently not used).
+#' @description Function shows the output of the CNV analysis with conumee. To use the results as input for GISTIC choose \code{what = "gistic"}. To assign the resulting segments to their copy number state and their size (focal, arm-level or whole chromosome) choose \code{what = "overview"}. The threshold for the log2-ratio to identify gains or losses is \code{0.1} by default.
 #' @examples
 #' # prepare
 #' library(minfiData)
@@ -844,7 +897,10 @@ setMethod("CNV.summaryplot", signature(object = "CNV.analysis"), function(object
 #' CNV.write(x, what = 'detail')
 #' CNV.write(x, what = 'bins')
 #' CNV.write(x, what = 'probes')
+#' CNV.write(x, what = 'gistic')
+#' CNV.write(x, what = 'overview')
 #' @return if parameter \code{file} is not supplied, the table is returned as a \code{data.frame} object.
+#' @author Bjarne Daenekas, Volker Hovestadt \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.write", function(object, ...) {
     standardGeneric("CNV.write")

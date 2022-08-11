@@ -47,12 +47,13 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
   #mouse beginning
     if( array_type == "mouse") {
+
+      data("mouse_annotation")
+
       object@genome <- data.frame(chr = paste("chr", c(1:19), sep = ""),
                                   stringsAsFactors = FALSE)
 
       rownames(object@genome) <- object@genome$chr
-
-      #data(mouse_annotation.rda)
 
       message("using mm10 genome annotations from UCSC")
 
