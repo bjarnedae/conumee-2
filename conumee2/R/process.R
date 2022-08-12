@@ -89,18 +89,23 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
               aobject@probes <- anno@probes[-ind_del_ao,]
               #changing the annotation object
 
-              message("creating bins")
+              message("creating new bins")
               anno.tile <- CNV.create_bins(hg19.anno = aobject@genome, bin_minsize = aobject@args$bin_minsize,
                                            hg19.gap = aobject@gap, hg19.exclude = aobject@exclude)
               message(" - ", length(anno.tile), " bins created")
 
-              message("merging bins")
+              message("merging new bins")
+
+              if (is.null(aobject@genome$pg)) {
+
               aobject@bins <- CNV.merge_bins_mice(hg19.anno = aobject@genome, hg19.tile = anno.tile,
-                                                 bin_minprobes = aobject@args$bin_minprobes, hg19.probes = aobject@probes, bin_maxsize = aobject@args$bin_maxsize)
+                                                  bin_minprobes = aobject@args$bin_minprobes, hg19.probes = aobject@probes, bin_maxsize = aobject@args$bin_maxsize)
+              } else {
+
+              aobject@bins <- CNV.merge_bins(hg19.anno = aobject@genome, hg19.tile = anno.tile,
+                                                    bin_minprobes = aobject@args$bin_minprobes, hg19.probes = aobject@probes, bin_maxsize = aobject@args$bin_maxsize)
+              }
               message(" - ", length(aobject@bins), " bins remaining")
-
-
-
               message("annotation object finished")
               message(paste(nrow(qload@intensity)," CpGs preserved", sep = ""))
 
