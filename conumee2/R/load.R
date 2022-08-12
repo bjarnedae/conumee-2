@@ -222,6 +222,7 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
             }))
             colnames(object) <- sample_sheet$Sample_Name
             object <- as.data.frame(object)
+            return(object)
 
           })
 
