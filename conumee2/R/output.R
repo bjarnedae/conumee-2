@@ -979,7 +979,7 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
       if (!grepl(".seg$", file))
         warning("filename does not end in .seg")
     # seg format, last numeric column is used in igv
-    if(nrow(object@anno$genome) == 19) {
+    if(nrow(object@anno@genome) == 19) {
       warning("GISTIC is not compatible with Illumina Methylation arrays for mice.")
     }
     x <- data.frame(matrix(ncol = 0, nrow = 0))
