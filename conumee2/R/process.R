@@ -60,7 +60,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
               stop("reference set intensities not given for all probes.")
 
             if (reduce_noise) {
-              message("identifying and excluding most variable probes among the set of control samples")
+              message("identifying and excluding most variable probes among the set of control samples") #reduce noise beginning
 
               cpgs_controlsamples <- data.frame(matrix(ncol = 0,nrow = nrow(ref@intensity)))
               for (i in 1:ncol(ref@intensity)) {
@@ -87,6 +87,20 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
 
               ind_del_ao <- which(names(aobject@probes) %in% cpgs_exclude)
               aobject@probes <- anno@probes[-ind_del_ao,]
+              #changing the annotation object
+
+              message("creating bins")
+              anno.tile <- CNV.create_bins(hg19.anno = aobject@genome, bin_minsize = aobject@args$bin_minsize,
+                                           hg19.gap = aobject@gap, hg19.exclude = aobject@exclude)
+              message(" - ", length(anno.tile), " bins created")
+
+              message("merging bins")
+              aobject@bins <- CNV.merge_bins_mice(hg19.anno = aobject@genome, hg19.tile = anno.tile,
+                                                 bin_minprobes = aobject@args$bin_minprobes, hg19.probes = aobject@probes, bin_maxsize = aobject@args$bin_maxsize)
+              message(" - ", length(aobject@bins), " bins remaining")
+
+
+
               message("annotation object finished")
               message(paste(nrow(qload@intensity)," CpGs preserved", sep = ""))
 
@@ -128,7 +142,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
                                                                   na.rm = TRUE)))
               }
               names(object@fit$noise) <- colnames(qload@intensity)
-              return(object)
+              return(object)          #reduce noise end
             } else {
 
             object <- new("CNV.analysis")
