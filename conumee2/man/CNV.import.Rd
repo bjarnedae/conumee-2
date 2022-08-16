@@ -20,10 +20,10 @@ CNV.import(directory, sample_sheet, ...)
 \code{dataframe} object.
 }
 \description{
-Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting matrix for \code{CNV.load}.
+Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting \code{data.frame} for \code{CNV.load}.
 }
 \details{
-This method loads the unmethylated and methylated signal intensity for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting matrix should be used for \code{CNV.load}
+This method loads the unmethylated and methylated signal intensities for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
 }
 \author{
 Bjarne Daenekas \email{conumee@hovestadt.bio}

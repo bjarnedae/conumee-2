@@ -182,12 +182,12 @@ read.450k.url <- function(url = NULL, idat = NULL) {
 
 
 #' CNV.import
-#' @description Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting matrix for \code{CNV.load}.
+#' @description Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting \code{data.frame} for \code{CNV.load}.
 #' @param directory Specify the folder that stores the .idat-Files.
 #' @param sample_sheet dataframe. Provide a sample sheet with at least three columns: \code{Sample_Name}, \code{Sentrix_ID} and \code{Sentrix_Position}. The spelling of the colnames must be exactly as shown.
 #' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
 #' @return \code{dataframe} object.
-#' @details This method loads the unmethylated and methylated signal intensity for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting matrix should be used for \code{CNV.load}
+#' @details This method loads the unmethylated and methylated signal intensities for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
 #' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.import", function(directory, sample_sheet, ...) {
@@ -207,7 +207,7 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
             lf <- list.files(directory, pattern=".idat$", full.names = TRUE)
 
 
-            object <- do.call(cbind, lapply(sample_sheet$Sample_Name, function(i) {
+            object <- suppressWarnings(do.call(cbind, lapply(sample_sheet$Sample_Name, function(i) {
               message(i)
               f <- lf[grepl(paste0(sample_sheet[match(i, sample_sheet$Sample_Name), "Sentrix_ID"], "_", sample_sheet[match(i, sample_sheet$Sample_Name), "Sentrix_Position"], "_Grn"), lf)]
               g <- readIDAT(f)[["Quants"]]
@@ -219,7 +219,7 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
               names(t1r) <- CNV.import_mouse_data[["type1r"]]$Name
               names(t2) <- CNV.import_mouse_data[["type2"]]$Name
               c(t1g, t1r, t2)
-            }))
+            })))
             colnames(object) <- sample_sheet$Sample_Name
             object <- as.data.frame(object)
             return(object)
