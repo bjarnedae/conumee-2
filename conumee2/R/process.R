@@ -34,7 +34,7 @@
 #' # coefficients from linear regression
 #' x@@fit$coef
 #'
-#' @author Volker Hovestadt \email{conumee@@hovestadt.bio}, Bjarne Daenekas
+#' @author Volker Hovestadt, Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.fit", function(query, ref, anno, ...) {
     standardGeneric("CNV.fit")
@@ -62,26 +62,28 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
             if (reduce_noise) {
               message("identifying and excluding most variable probes among the set of control samples") #reduce noise beginning
 
-              cpgs_controlsamples <- data.frame(matrix(ncol = 0,nrow = nrow(ref@intensity)))
-              for (i in 1:ncol(ref@intensity)) {
-                cpgs <- rownames(ref@intensity[which(ref@intensity[,i] <= as.numeric(quantile(ref@intensity[,i], probs = 0.1))),])
-                cols <- as.numeric(rownames(ref@intensity) %in% cpgs)
-                cpgs_controlsamples <- cbind(cpgs_controlsamples, cols)
-              }
-
-              rownames(cpgs_controlsamples) <- rownames(ref@intensity)
-              colnames(cpgs_controlsamples) <- c(1:ncol(ref@intensity))
-              cpgs_controlsamples$sum <- as.numeric(apply(cpgs_controlsamples,1,sum))
-              cpgs_exclude <- rownames(cpgs_controlsamples[order(cpgs_controlsamples$sum, decreasing = TRUE),][1:(perc_cpgs*nrow(query@intensity)),])
+              c_samples <- ref@intensity
+              means <- apply(c_samples, 1, mean)
+              st_dev <- apply(c_samples, 1, sd)
+              ratio <- st_dev/means
+              c_samples$ratio <- ratio
+              cpgs_exclude <- rownames(c_samples[order(c_samples$ratio, decreasing = TRUE),][1:(perc_cpgs*nrow(c_samples)),])
 
 
               qload <- query
               refload <- ref
 
               ind_del_query <- which(rownames(qload@intensity) %in% cpgs_exclude) #identifying CpGs that should be excluded
+
+              if (ncol(qload@intensity) == 1) {
+                qload@intensity <- as.data.frame(qload@intensity[-ind_del_query,], row.names = rownames(qload@intensity)[-ind_del_query])
+              } else {
               qload@intensity <- qload@intensity[-ind_del_query,]
+              }
+
               ind_del_ref <- which(rownames(refload@intensity) %in% cpgs_exclude)
               refload@intensity <- refload@intensity[-ind_del_ref,]
+
               message ("modifying annotation object for CVN.fit()")
               aobject <- anno
 
@@ -119,7 +121,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
               object@fit$coef <- data.frame(matrix(ncol = 0, nrow = ncol(refload@intensity)))
               object@fit$ratio <- data.frame(matrix(ncol = 0, nrow = length(p)))
               for (i in 1:ncol(qload@intensity)) {
-                message(colnames(query@intensity)[i])
+                message(paste(colnames(query@intensity)[i]), " (",i/ncol(query@intensity)*100, "%", ")", sep = "")
                 r <- cor(qload@intensity[p, ], refload@intensity[p, ])[i, ] < 0.99
                 if (any(!r)) message("query sample seems to also be in the reference set. not used for fit.")
                 if (intercept) {
@@ -136,17 +138,20 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
 
                 object@fit$ratio <- cbind(object@fit$ratio, as.numeric(log2(qload@intensity[p, i]/ref.predict[p])))
               }
-              colnames(object@fit$coef) <- colnames(qload@intensity)
+              colnames(object@fit$coef) <- colnames(query@intensity)
               rownames(object@fit$coef) <- colnames(refload@intensity)
-              colnames(object@fit$ratio) <- colnames(qload@intensity)
+              colnames(object@fit$ratio) <- colnames(query@intensity)
               rownames(object@fit$ratio) <- p
+
+
+
 
               object@fit$noise <- as.numeric()
               for (i in 1:ncol(qload@intensity)) {
                 object@fit$noise <- c(object@fit$noise, sqrt(mean((object@fit$ratio[-1,i] - object@fit$ratio[-nrow(object@fit$ratio),i])^2,
                                                                   na.rm = TRUE)))
               }
-              names(object@fit$noise) <- colnames(qload@intensity)
+              names(object@fit$noise) <- colnames(query@intensity)
               return(object)          #reduce noise end
             } else {
 
@@ -159,7 +164,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
             object@fit$coef <- data.frame(matrix(ncol = 0, nrow = ncol(ref@intensity)))
             object@fit$ratio <- data.frame(matrix(ncol = 0, nrow = length(p)))
             for (i in 1:ncol(query@intensity)) {
-              message(colnames(query@intensity)[i])
+              message(paste(colnames(query@intensity)[i]), " (",i/ncol(query@intensity)*100, "%", ")", sep = "")
               r <- cor(query@intensity[p, ], ref@intensity[p, ])[i, ] < 0.99
               if (any(!r)) message("query sample seems to also be in the reference set. not used for fit.")
               if (intercept) {
@@ -176,6 +181,8 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
 
               object@fit$ratio <- cbind(object@fit$ratio, as.numeric(log2(query@intensity[p, i]/ref.predict[p])))
             }
+
+
             colnames(object@fit$coef) <- colnames(query@intensity)
             rownames(object@fit$coef) <- colnames(ref@intensity)
             colnames(object@fit$ratio) <- colnames(query@intensity)
