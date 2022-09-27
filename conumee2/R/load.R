@@ -226,3 +226,45 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
 
           })
 
+#' CNV.define_detail
+#' @description Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting \code{data.frame} for \code{CNV.load}.
+#' @param directory Specify the folder that stores the .idat-Files.
+#' @param sample_sheet dataframe. Provide a sample sheet with at least three columns: \code{Sample_Name}, \code{Sentrix_ID} and \code{Sentrix_Position}. The spelling of the colnames must be exactly as shown.
+#' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
+#' @return \code{dataframe} object.
+#' @details This method loads the unmethylated and methylated signal intensities for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
+#' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
+#' @export
+setGeneric("CNV.define_detail", function(symbol,...) {
+  standardGeneric("CNV.define_detail")
+})
+
+#' @rdname CNV.define_detail
+setMethod("CNV.define_detail", signature(symbol = "character"),
+          function(symbol = "predefined") {
+
+            if(symbol == "predefined"){
+              message("using set of predefined regions")
+              object <- new("GRanges")
+              data("detail_regions")
+              object <- detail_regions
+              return(object)
+            }
+            data("genes")
+
+            if(any(query %in% genes$SYMBOL == FALSE)){
+              ind <- which(query %in% genes$SYMBOL == FALSE)
+              message(paste(query[ind]," is not part of the gene annotation. ", sep = ""))
+            }
+
+            subset <- genes[which(genes$SYMBOL %in% query)]
+            subset$thick <- ranges(subset)
+            colnames(mcols(subset)) <- c("name", "thick")
+            names(subset) <- 1:length(subset)
+            return(subset)
+          })
+
+
+
+
+
