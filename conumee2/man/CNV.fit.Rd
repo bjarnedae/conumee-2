@@ -65,5 +65,5 @@ x@fit$coef
 
 }
 \author{
-Volker Hovestadt \email{conumee@hovestadt.bio}, Bjarne Daenekas
+Volker Hovestadt, Bjarne Daenekas \email{conumee@hovestadt.bio}
 }

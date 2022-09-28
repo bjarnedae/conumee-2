@@ -227,24 +227,21 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
           })
 
 #' CNV.define_detail
-#' @description Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting \code{data.frame} for \code{CNV.load}.
-#' @param directory Specify the folder that stores the .idat-Files.
-#' @param sample_sheet dataframe. Provide a sample sheet with at least three columns: \code{Sample_Name}, \code{Sentrix_ID} and \code{Sentrix_Position}. The spelling of the colnames must be exactly as shown.
+#' @description Create a \code{GRanges} object for detail regions. Downstream plotting functions will create individual plots for each detail region.
+#' @param array_type character. One of \code{450k}, \code{EPIC} or \code{mouse}. Defaults to \code{450k}.
+#' @param symbol character vector. Specify the genes by using their \code{SYMBOL}. Please use capital letters. Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.
 #' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
-#' @return \code{dataframe} object.
-#' @details This method loads the unmethylated and methylated signal intensities for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
+#' @return \code{GRanges} object.
+#' @examples
+#' #create a GRanges object of detail regions
+#' detail_regions <- CNV.define_detail(array_type = "450k", symbol = c("CDK6", "PTEN", "MYCN"))
+#' detail_regions
 #' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
-setGeneric("CNV.define_detail", function(symbol,...) {
-  standardGeneric("CNV.define_detail")
-})
-
-#' @rdname CNV.define_detail
-setMethod("CNV.define_detail", signature(symbol = "character"),
-          function(symbol = "predefined") {
-
-            if(symbol == "predefined"){
-              message("using set of predefined regions")
+        CNV.define_detail <- function(array_type = "450k", symbol = "predefined") {
+            if(array_type %in% c("450k", "EPIC")) {
+            if(symbol[1] == "predefined"){
+              message("using set of predefined regions (hg19 genome)")
               object <- new("GRanges")
               data("detail_regions")
               object <- detail_regions
@@ -252,19 +249,40 @@ setMethod("CNV.define_detail", signature(symbol = "character"),
             }
             data("genes")
 
-            if(any(query %in% genes$SYMBOL == FALSE)){
-              ind <- which(query %in% genes$SYMBOL == FALSE)
-              message(paste(query[ind]," is not part of the gene annotation. ", sep = ""))
+            if(any(symbol %in% genes$SYMBOL == FALSE)){
+              ind <- which(symbol %in% genes$SYMBOL == FALSE)
+              message(paste(symbol[ind]," is not part of the gene annotation. ", sep = ""))
             }
 
-            subset <- genes[which(genes$SYMBOL %in% query)]
+            subset <- genes[which(genes$SYMBOL %in% symbol)]
             subset$thick <- ranges(subset)
             colnames(mcols(subset)) <- c("name", "thick")
             names(subset) <- 1:length(subset)
             return(subset)
-          })
+            }
+          if(array_type == "mouse") {
+            if(symbol[1] == "predefined"){
+              message("using set of predefined regions (mm10 genome)")
+              object <- new("GRanges")
+              data("detail_regions_mouse")
+              object <- detail_regions_mouse
+              return(object)
+            }
+            data("genes_mm10")
 
+            if(any(symbol %in% genes_mm10$SYMBOL == FALSE)){
+              ind <- which(symbol %in% genes_mm10$SYMBOL == FALSE)
+              message(paste(symbol[ind]," is not part of the gene annotation. ", sep = ""))
+            }
 
-
+            subset <- genes_mm10[which(genes_mm10$SYMBOL %in% symbol)]
+            subset$thick <- ranges(subset)
+            colnames(mcols(subset)) <- c("name", "thick")
+            names(subset) <- 1:length(subset)
+            return(subset)
+          } else {
+            message("please choose 450k, EPIC or mouse as array_type")
+          }
+          }
 
 

@@ -2,6 +2,7 @@
 
 export(CNV.bin)
 export(CNV.create_anno)
+export(CNV.define_detail)
 export(CNV.detail)
 export(CNV.detailplot)
 export(CNV.detailplot_wrap)
