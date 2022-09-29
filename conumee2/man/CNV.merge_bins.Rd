@@ -9,7 +9,7 @@ CNV.merge_bins(
   hg19.tile,
   bin_minprobes = 20,
   hg19.probes,
-  bin_maxsize = 5e+06,
+  bin_maxsize = 5000000,
   verbose = FALSE
 )
 }

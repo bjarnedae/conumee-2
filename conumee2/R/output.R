@@ -755,6 +755,7 @@ setMethod("CNV.detailplot_wrap", signature(object = "CNV.analysis"), function(ob
 #' CNV.detailplot(x, name = 'PTEN')
 #' CNV.detailplot_wrap(x)
 #' CNV.summaryplot(x)
+#' CNV.heatmap(x)
 #'
 #' # output text files
 #' CNV.write(x, what = 'segments')
@@ -861,6 +862,100 @@ setMethod("CNV.summaryplot", signature(object = "CNV.analysis"), function(object
 
   if (set_par)
     par(mfrow = mfrow_original, mar = mar_original, oma = oma_original)
+
+})
+
+
+#' CNV.heatmap
+#' @description Create a heatmap to illustrate CNVs in a set of query samples. Colors correspond to the other plots.
+#' @param object \code{CNV.analysis} object.
+#' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
+#' @param main character. Specify the title of the plot. Defaults to \code{NULL}.
+#' @param hclust logical. Should hierarchical clustering be performed? Default to \code{TRUE}.
+#' @param hclust_method character. The agglomeration method to be used. This should be (an unambiguous abbreviation of) one of "ward.D", "ward.D2", "single", "complete", "average" (= UPGMA), "mcquitty" (= WPGMA), "median" (= WPGMC) or "centroid" (= UPGMC).
+#' @param dist_method character. The distance measure to be used. This must be one of "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski". Any unambiguous substring can be given.
+#' @param cexRow numeric. Adjust the font size for row labeling. Default to 0.5.
+#' @param zlim numeric. The minimum and maximum z values for which colors should be plotted. Default to \code{c(-0.5,0.5)}.
+#' @param useRaster logical. Should a bitmap raster be used to create the plot instead of polygons? Default to \code{TRUE}.
+#' @param ... Additional parameters
+#' @examples
+#' #' # prepare
+#' library(minfiData)
+#' data(MsetEx)
+#' d <- CNV.load(MsetEx)
+#' data(detail_regions)
+#' anno <- CNV.create_anno(detail_regions = detail_regions)
+#'
+#' # create/modify object
+#' x <- CNV.segment(CNV.detail(CNV.bin(CNV.fit(query = d['GroupB_1'],
+#'     ref = d[c('GroupA_1', 'GroupA_2', 'GroupA_3')], anno))))
+#'
+#' # output plots
+#' CNV.genomeplot(x)
+#' CNV.genomeplot(x, chr = 'chr6')
+#' CNV.detailplot(x, name = 'PTEN')
+#' CNV.detailplot_wrap(x)
+#' CNV.summaryplot(x)
+#' CNV.heatmap(x)
+#'
+#' # output text files
+#' CNV.write(x, what = 'segments')
+#' CNV.write(x, what = 'detail')
+#' CNV.write(x, what = 'bins')
+#' CNV.write(x, what = 'probes')
+#' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
+#' @export
+setGeneric("CNV.heatmap", function(object, ...) {
+  standardGeneric("CNV.heatmap")
+})
+
+#' @rdname CNV.heatmap
+setMethod("CNV.heatmap", signature(object = "CNV.analysis"), function(object,
+           set_par = TRUE, main = NULL, hclust = TRUE, hclust_method = "average", dist_method = "euclidian", cexRow = 1/2, zlim = c(-0.5,0.5), useRaster = TRUE,...) {
+
+  if (set_par) {
+    mfrow_original <- par()$mfrow
+    mar_original <- par()$mar
+    oma_original <- par()$oma
+  }
+
+  options(max.print = 1000)
+  options(stringsAsFactors = FALSE)
+  options(scipen = 999)
+
+  bins <- CNV.write(object, what = "bins")
+  annotation <- bins[,c(1:4)]
+  annotation$X <- 1:nrow(annotation)
+  bins <- bins[,-c(1:4)]
+  bins <- t(bins)
+
+  b <- which(head(annotation$Chromosome, -1) != tail(annotation$Chromosome, -1))  # between chromosomes
+  l <- round(sapply(split(annotation$X, annotation$Chromosome), mean))
+  ll <- rep(NA, nrow(annotation))
+  ll[l] <- names(l)
+
+  my_palette <- colorRampPalette(c("red","red", "white", "green", "green"))(n = 1000)
+
+  if(hclust){
+
+  bins.dist <- dist(bins, method = dist_method)
+  bins.hc <- hclust(bins.dist, method = hclust_method)
+
+
+  heatmap(bins, Colv = NA, Rowv = as.dendrogram(bins.hc), scale="n", useRaster = useRaster, main = main,
+          col = my_palette, cexRow = cexRow, zlim = zlim, add.expr = abline(v=b), labCol = ll, cexCol = 1)
+
+  if (set_par)
+    par(mfrow = mfrow_original, mar = mar_original, oma = oma_original)
+
+  } else {
+
+    heatmap(bins, Colv = NA, Rowv = NA, scale="n", useRaster = useRaster, main = main,
+            col = my_palette, cexRow = cexRow, zlim = zlim, add.expr = abline(v=b), labCol = ll, cexCol = 1)
+
+    if (set_par)
+      par(mfrow = mfrow_original, mar = mar_original, oma = oma_original)
+  }
 
 })
 

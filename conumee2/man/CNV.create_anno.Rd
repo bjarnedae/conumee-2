@@ -7,7 +7,7 @@
 CNV.create_anno(
   bin_minprobes = 15,
   bin_minsize = 50000,
-  bin_maxsize = 5e+06,
+  bin_maxsize = 5000000,
   array_type = "450k",
   exclude_regions = NULL,
   detail_regions = NULL
