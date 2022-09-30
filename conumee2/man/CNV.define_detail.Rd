@@ -9,12 +9,12 @@ CNV.define_detail(array_type = "450k", symbol = "predefined")
 \arguments{
 \item{array_type}{character. One of \code{450k}, \code{EPIC} or \code{mouse}. Defaults to \code{450k}.}
 
-\item{symbol}{character vector. Specify the genes by using their \code{SYMBOL}. Please use capital letters. Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.}
+\item{symbol}{character vector. Specify the genes by using their \code{SYMBOL} (case sensitive). Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.}
 
 \item{...}{Additional parameters (\code{CNV.load} generic, currently not used).}
 }
 \value{
-\code{GRanges} object.
+\code{GRanges} object
 }
 \description{
 Create a \code{GRanges} object for detail regions. Downstream plotting functions will create individual plots for each detail region.

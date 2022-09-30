@@ -229,9 +229,9 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
 #' CNV.define_detail
 #' @description Create a \code{GRanges} object for detail regions. Downstream plotting functions will create individual plots for each detail region.
 #' @param array_type character. One of \code{450k}, \code{EPIC} or \code{mouse}. Defaults to \code{450k}.
-#' @param symbol character vector. Specify the genes by using their \code{SYMBOL}. Please use capital letters. Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.
+#' @param symbol character vector. Specify the genes by using their \code{SYMBOL} (case sensitive). Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.
 #' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
-#' @return \code{GRanges} object.
+#' @return \code{GRanges} object
 #' @examples
 #' #create a GRanges object of detail regions
 #' detail_regions <- CNV.define_detail(array_type = "450k", symbol = c("CDK6", "PTEN", "MYCN"))
@@ -255,7 +255,7 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
             }
 
             subset <- genes[which(genes$SYMBOL %in% symbol)]
-            subset$thick <- ranges(subset)
+            subset$thick <- IRanges(start = start(subset) - 100000, end = end(subset) + 100000)
             colnames(mcols(subset)) <- c("name", "thick")
             names(subset) <- 1:length(subset)
             return(subset)
@@ -276,7 +276,7 @@ setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.
             }
 
             subset <- genes_mm10[which(genes_mm10$SYMBOL %in% symbol)]
-            subset$thick <- ranges(subset)
+            subset$thick <- subset$thick <- IRanges(start = start(subset) - 100000, end = end(subset) + 100000)
             colnames(mcols(subset)) <- c("name", "thick")
             names(subset) <- 1:length(subset)
             return(subset)
