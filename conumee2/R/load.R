@@ -1,5 +1,6 @@
 ##### LOADING methods #####
 #' @import illuminaio
+#' @import RnBeads
 NULL
 
 #' CNV.load
@@ -100,6 +101,25 @@ setMethod("CNV.load", signature(input = "numeric"), function(input, names = NULL
     object <- CNV.check(object)
 
     return(object)
+})
+
+#' @rdname CNV.load
+setMethod("CNV.load", signature(input = "RnBeadRawSet"), function(input, names = NULL) {
+  object <- new("CNV.data")
+  object@date <- date()
+
+  M <- input@M
+  U <- input@U
+
+  combined_probes <- round(M + U, digits = 0)
+  rownames(combined_probes) <- substr(rownames(input@sites),1, 10)
+  colnames(combined_probes) <- input@pheno$Sample_Name
+
+  object@intensity <- as.data.frame(combined_probes)
+
+  object <- CNV.check(object)
+
+  return(object)
 })
 
 
