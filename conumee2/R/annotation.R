@@ -4,7 +4,7 @@
 #' @import IlluminaHumanMethylation450kmanifest
 #' @import IlluminaHumanMethylation450kanno.ilmn12.hg19
 #' @import IlluminaHumanMethylationEPICmanifest
-#' @import IlluminaHumanMethylationEPICanno.ilm10b2.hg19
+#' @import IlluminaHumanMethylationEPICanno.ilm10b4.hg19
 #' @import GenomicRanges
 #' @import IRanges
 #' @import GenomeInfoDb
@@ -181,7 +181,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
     }
     if (is.element(array_type, c("EPIC", "overlap"))) {
       message("getting EPIC annotations")
-      probesEPIC <- sort(minfi::getLocations(IlluminaHumanMethylationEPICanno.ilm10b2.hg19::IlluminaHumanMethylationEPICanno.ilm10b2.hg19))
+      probesEPIC <- sort(minfi::getLocations(IlluminaHumanMethylationEPICanno.ilm10b4.hg19::IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
     }
     if (array_type == "overlap") {
       probes <- sort(subsetByOverlaps(probes450k, probesEPIC))
