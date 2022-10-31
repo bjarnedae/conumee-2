@@ -6,6 +6,7 @@
 \alias{CNV.load,data.frame-method}
 \alias{CNV.load,matrix-method}
 \alias{CNV.load,numeric-method}
+\alias{CNV.load,RnBeadRawSet-method}
 \title{CNV.load}
 \usage{
 CNV.load(input, ...)
@@ -17,6 +18,8 @@ CNV.load(input, ...)
 \S4method{CNV.load}{matrix}(input, names = NULL, ...)
 
 \S4method{CNV.load}{numeric}(input, names = NULL)
+
+\S4method{CNV.load}{RnBeadRawSet}(input, names = NULL)
 }
 \arguments{
 \item{input}{Object of MethylSet class (minfi package), data.frame class, matrix class or numeric class.}
