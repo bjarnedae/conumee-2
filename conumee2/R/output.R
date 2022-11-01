@@ -1163,7 +1163,7 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
 #' \code{CNV.plotly} plots an interactive copy number profile
 #'
 #' @param x A \code{CNVanalysis} object after \code{CNV.segment} is performed.
-#' @param sample_n character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(x@@fit$coef)}
+#' @param sample_name character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(x@@fit$coef)}
 #' @export
 #' @import ggplot2
 #' @import plotly
