@@ -198,8 +198,11 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
         object@genome$chr)]
 
 
-    object@probes <- sort(GRanges(as.vector(seqnames(probes)), ranges(probes),
-        seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
+    ao_probes <- GRanges(as.vector(seqnames(probes)), ranges(probes),
+        seqinfo = Seqinfo(object@genome$chr, object@genome$size))
+    ao_probes$genes <- probes$genes
+    ao_probes <- sort(ao_probes)
+    object$probes <- ao_probes
     message(" - ", length(object@probes), " probes used")
 
     if (!is.null(exclude_regions)) {
