@@ -1234,8 +1234,8 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
 
     scale_x_continuous(breaks=tickl,labels = c(chr))+#,expand = c(0, 0),limits = c(0, max(x)))+
     theme(axis.text.x= element_text(size=10,angle = 90))
-  ggp <- plotly::ggplotly(p)
-  ggpb <- plotly::plotly_build(ggp)
+  suppressWarnings(ggp <- plotly::ggplotly(p))
+  suppressWarnings(ggpb <- plotly::plotly_build(ggp))
 
   ggpb$x$data[[1]]$text <- paste0(seqnames(x@anno@bins),"<br>","start: ",
                                   start(x@anno@bins),"<br>","end: ",end(x@anno@bins),"<br>",

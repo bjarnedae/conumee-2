@@ -177,11 +177,15 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
     probes450k <- probesEPIC <- GRanges()
     if (is.element(array_type, c("450k", "overlap"))) {
       message("getting 450k annotations")
-      probes450k <- sort(minfi::getLocations(IlluminaHumanMethylation450kanno.ilmn12.hg19::IlluminaHumanMethylation450kanno.ilmn12.hg19))
+      probes450k <- minfi::getLocations(IlluminaHumanMethylation450kanno.ilmn12.hg19::IlluminaHumanMethylation450kanno.ilmn12.hg19)
+      probes450k$genes <- minfi::getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19::IlluminaHumanMethylation450kanno.ilmn12.hg19)$UCSC_RefGene_Name
+      probes450k <- sort(probes450k)
     }
     if (is.element(array_type, c("EPIC", "overlap"))) {
       message("getting EPIC annotations")
-      probesEPIC <- sort(minfi::getLocations(IlluminaHumanMethylationEPICanno.ilm10b4.hg19::IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
+      probesEPIC <- minfi::getLocations(IlluminaHumanMethylationEPICanno.ilm10b4.hg19::IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+      probesEPIC$genes <- minfi::getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19::IlluminaHumanMethylationEPICanno.ilm10b4.hg19)$UCSC_RefGene_Name
+      probesEPIC <- sort(probesEPIC)
     }
     if (array_type == "overlap") {
       probes <- sort(subsetByOverlaps(probes450k, probesEPIC))
@@ -192,6 +196,8 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
     # CpG probes only
     probes <- probes[substr(names(probes), 1, 2) == "cg" & is.element(as.vector(seqnames(probes)),
         object@genome$chr)]
+
+
     object@probes <- sort(GRanges(as.vector(seqnames(probes)), ranges(probes),
         seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
     message(" - ", length(object@probes), " probes used")
