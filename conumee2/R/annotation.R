@@ -13,7 +13,7 @@ NULL
 
 #' CNV.create_anno
 #' @description Create annotations for CNV analysis.
-#' @param bin_minprobes numeric. Minimum number of probes per bin. Bins are interatively merged with neighboring bin until minimum number is reached.
+#' @param bin_minprobes numeric. Minimum number of probes per bin. Bins are iteratively merged with neighboring bin until minimum number is reached.
 #' @param bin_minsize numeric. Minimum size of a bin.
 #' @param bin_maxsize numeric. Maximum size of a bin. Merged bins that are larger are filtered out.
 #' @param array_type character. One of \code{450k}, \code{EPIC}, \code{mouse} or \code{overlap}. Defaults to \code{450k}.
