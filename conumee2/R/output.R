@@ -1162,13 +1162,19 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
 #'
 #' \code{CNV.plotly} plots an interactive copy number profile
 #'
-#' @param x A CNV analysis object after \code{CNV.segment} is performed.
-#' @param sample_n number. Number of single sample that should be plotted.
+#' @param x A \code{CNVanalysis} object after \code{CNV.segment} is performed.
+#' @param sample_n character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(x@@fit$coef)}
 #' @export
 #' @import ggplot2
 #' @import plotly
 
-CNV.plotly <- function(x, sample_n = 1){
+CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
+
+  if (!any(colnames(x@fit$coef) == sample_name)){
+    stop(message("Please provide the correct sample name."))
+  }
+
+  sample_n <- which(colnames(x@fit$coef) == sample_name)
 
   ylim = c(-1.25, 1.25)
   bin.ratio <- x@bin$ratio[[sample_n]] - x@bin$shift[sample_n]
@@ -1177,11 +1183,12 @@ CNV.plotly <- function(x, sample_n = 1){
   cols2 = c("red","red", "lightgrey", "green", "green")
 
 
+
   chr <- x@anno@genome$chr
   chr.cumsum0 <- .cumsum0(x@anno@genome[chr, "size"], n = chr)
 
   y <- chr.cumsum0[as.vector(seqnames(x@anno@bins))] + values(x@anno@bins)$midpoint
-  #
+
   chrs <- .cumsum0(x@anno@genome[chr, "size"], right = TRUE)
   chr.cumsum0 <- .cumsum0(x@anno@genome[chr, "size"], n = chr)
 
@@ -1190,6 +1197,7 @@ CNV.plotly <- function(x, sample_n = 1){
   }
 
   tickl <- .cumsum0(x@anno@genome[chr, "size"]) + x@anno@genome[chr,"size"]/2
+
   cols = c("red","red", "lightgrey", "green", "green")
   bin.ratio.cols <- apply(colorRamp(cols)((bin.ratio + max(abs(ylim)))/(2 *max(abs(ylim)))),
                           1, function(x) rgb(x[1], x[2], x[3], maxColorValue = 255))
@@ -1222,7 +1230,8 @@ CNV.plotly <- function(x, sample_n = 1){
     xlab("")+
     ylab("")+
     geom_point(aes(x=detail.x,y=detail.ratio),size=1.15,alpha=0.9,data=df3,color="red") +
-    #geom_text(aes(x=detail.x,y=detail.ratio,label=names),data=df3)+    # not working with plotly
+
+
     scale_x_continuous(breaks=tickl,labels = c(chr))+#,expand = c(0, 0),limits = c(0, max(x)))+
     theme(axis.text.x= element_text(size=10,angle = 90))
   ggp <- plotly::ggplotly(p)
