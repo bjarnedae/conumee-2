@@ -1160,74 +1160,63 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
 
 #' CNV.plotly
 #'
-#' \code{MNPcnvggplotly} plot an interactive copy number profile
+#' \code{CNV.plotly} plots an interactive copy number profile
 #'
-#' @param x an CNV analysis object generated with \code{\link[conumee]{CNV.segment}} or \code{\link[mnp.v11b4]{MNPcnv}}
+#' @param x A CNV analysis object after \code{CNV.segment} is performed.
+#' @param sample_n number. Number of single sample that should be plotted.
 #' @export
 #' @import ggplot2
 #' @import plotly
 
-CNV.plotly <- function(xx, sample_n = 1){
+CNV.plotly <- function(x, sample_n = 1){
 
   ylim = c(-1.25, 1.25)
-  bin.ratio <- xx@bin$ratio - xx@bin$shift
+  bin.ratio <- x@bin$ratio[[sample_n]] - x@bin$shift[sample_n]
   bin.ratio[bin.ratio < ylim[1]] <- ylim[1]
   bin.ratio[bin.ratio > ylim[2]] <- ylim[2]
   cols2 = c("red","red", "lightgrey", "green", "green")
-  .cumsum0 <- function(x, left = TRUE, right = FALSE, n = NULL) {
-    xx <- c(0, cumsum(as.numeric(x)))
-    if (!left)
-      xx <- xx[-1]
-    if (!right)
-      xx <- head(xx, -1)
-    names(xx) <- n
-    xx
-  }
-  chrX = TRUE
-  chrY = TRUE
-  chr <- xx@anno@genome$chr
-  chr.cumsum0 <- .cumsum0(xx@anno@genome[chr, "size"], n = chr)
-  if (!chrX & is.element("chrX", names(chr.cumsum0)))
-    chr.cumsum0["chrX"] <- NA
-  if (!chrY & is.element("chrY", names(chr.cumsum0)))
-    chr.cumsum0["chrY"] <- NA
 
-  x <- chr.cumsum0[as.vector(seqnames(xx@anno@bins))] + values(xx@anno@bins)$midpoint
+
+  chr <- x@anno@genome$chr
+  chr.cumsum0 <- .cumsum0(x@anno@genome[chr, "size"], n = chr)
+
+  y <- chr.cumsum0[as.vector(seqnames(x@anno@bins))] + values(x@anno@bins)$midpoint
   #
-  chrs <- .cumsum0(xx@anno@genome[chr, "size"], right = TRUE)
-  chrspq <- .cumsum0(xx@anno@genome[chr, "size"]) + xx@anno@genome[chr,
-                                                                   "pq"]
-  tickl <- .cumsum0(xx@anno@genome[chr, "size"]) + xx@anno@genome[chr,
-                                                                  "size"]/2
+  chrs <- .cumsum0(x@anno@genome[chr, "size"], right = TRUE)
+  chr.cumsum0 <- .cumsum0(x@anno@genome[chr, "size"], n = chr)
+
+  if (colnames(x@anno@genome)[3] == "pq"){
+  chrspq <- .cumsum0(x@anno@genome[chr, "size"]) + x@anno@genome[chr,"pq"]
+  }
+
+  tickl <- .cumsum0(x@anno@genome[chr, "size"]) + x@anno@genome[chr,"size"]/2
   cols = c("red","red", "lightgrey", "green", "green")
-  bin.ratio.cols <- apply(colorRamp(cols)((bin.ratio + max(abs(ylim)))/(2 *
-                                                                          max(abs(ylim)))), 1, function(x) rgb(x[1], x[2], x[3], maxColorValue = 255))
+  bin.ratio.cols <- apply(colorRamp(cols)((bin.ratio + max(abs(ylim)))/(2 *max(abs(ylim)))),
+                          1, function(x) rgb(x[1], x[2], x[3], maxColorValue = 255))
 
+  df <- data.frame(y,bin.ratio,bin.ratio.cols)
 
-  #bin.ratio.cols <- rep("black",length(bin.ratio))
-
-  df <- data.frame(x,bin.ratio,bin.ratio.cols)
-
-  xs<- xx@seg$summary$loc.start + chr.cumsum0[xx@seg$summary$chrom]
-  xe <- xx@seg$summary$loc.end + chr.cumsum0[xx@seg$summary$chrom]
-  ys <- xx@seg$summary$seg.median - xx@bin$shift
-  ye <- xx@seg$summary$seg.median - xx@bin$shift
+  xs<- x@seg$summary[[sample_n]]$loc.start + chr.cumsum0[x@seg$summary[[sample_n]]$chrom]
+  xe <- x@seg$summary[[sample_n]]$loc.end + chr.cumsum0[x@seg$summary[[sample_n]]$chrom]
+  ys <- x@seg$summary[[sample_n]]$seg.median - x@bin$shift[sample_n]
+  ye <- x@seg$summary[[sample_n]]$seg.median - x@bin$shift[sample_n]
 
   df2 <- data.frame(xs,xe,ys,ye)
 
-  detail.ratio <- xx@detail$ratio - xx@bin$shift
+  detail.ratio <- x@detail$ratio[[sample_n]] - x@bin$shift[sample_n]
   detail.ratio[detail.ratio < ylim[1]] <- ylim[1]
   detail.ratio[detail.ratio > ylim[2]] <- ylim[2]
   detail.ratio.above <- (detail.ratio > 0 & detail.ratio < 0.85) | detail.ratio < -0.85
 
-  detail.x <- start(xx@anno@detail) + (end(xx@anno@detail) - start(xx@anno@detail)) /2 + chr.cumsum0[as.vector(seqnames(xx@anno@detail))]
+  detail.x <- start(x@anno@detail) + (end(x@anno@detail) - start(x@anno@detail)) /2 + chr.cumsum0[as.vector(seqnames(x@anno@detail))]
 
-  df3 <- data.frame(detail.ratio,detail.x,names=values(xx@anno@detail)$name)
+  df3 <- data.frame(detail.ratio,detail.x,names=values(x@anno@detail)$name)
 
-  p <- ggplot(df,aes(x=x, y=bin.ratio)) +
+  p <- ggplot(df,aes(x=y, y=bin.ratio)) +
     geom_point(colour=bin.ratio.cols,size=.5) + geom_vline(xintercept = chrs,color="black",size=0.1) +
     theme_bw()+
-    theme(text = element_text(family = "TArial"))+
+    ggtitle(names(x@fit$coef[sample_n]))+
+    theme(text = element_text(family = "Arial"))+
     geom_vline(xintercept = chrspq,color="black",size=.1,linetype="dotted")+ ylim(-1.25, 1.25)+
     geom_segment(aes(x = xs, y = ys, xend = xe, yend = ye),size=.5, data = df2,color="darkblue")+
     xlab("")+
@@ -1238,18 +1227,17 @@ CNV.plotly <- function(xx, sample_n = 1){
     theme(axis.text.x= element_text(size=10,angle = 90))
   ggp <- plotly::ggplotly(p)
   ggpb <- plotly::plotly_build(ggp)
-  # get gene annotation for bins
 
-  ggpb$x$data[[1]]$text <- paste0(seqnames(xx@anno@bins),"<br>","start: ",
-                                  start(xx@anno@bins),"<br>","end: ",end(xx@anno@bins),"<br>",
-                                  "probes: ",values(xx@anno@bins)$probes)
+  ggpb$x$data[[1]]$text <- paste0(seqnames(x@anno@bins),"<br>","start: ",
+                                  start(x@anno@bins),"<br>","end: ",end(x@anno@bins),"<br>",
+                                  "probes: ",values(x@anno@bins)$probes)
 
   ggpb$x$data[[2]]$text <- ""
   ggpb$x$data[[3]]$text <- ""
-  ggpb$x$data[[4]]$text <- paste0(xx@seg$summary$chrom,"<br>","start: ",
-                                  xx@seg$summary$loc.start,"<br>","end: ",xx@seg$summary$loc.end,"<br>",
-                                  "median: ",xx@seg$summary$seg.median)
-  ggpb$x$data[[5]]$text <- values(xx@anno@detail)$name
+  ggpb$x$data[[4]]$text <- paste0(x@seg$summary[[sample_n]]$chrom,"<br>","start: ",
+                                  x@seg$summary[[sample_n]]$loc.start,"<br>","end: ",x@seg$summary[[sample_n]]$loc.end,"<br>",
+                                  "median: ",x@seg$summary[[sample_n]]$seg.median)
+  ggpb$x$data[[5]]$text <- values(x@anno@detail)$name
   suppressWarnings(ggpb%>%toWebGL())
 }
 
