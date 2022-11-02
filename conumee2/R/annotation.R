@@ -149,18 +149,19 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
       }
     #mouse end
     else {
-        object@genome <- data.frame(chr = paste("chr", 1:22, sep = ""),
-            stringsAsFactors = FALSE)
+        object@genome <- data.frame(chr = paste("chr", 1:22, sep = ""), stringsAsFactors = FALSE)
 
     rownames(object@genome) <- object@genome$chr
 
     message("using hg19 genome annotations from UCSC")
+
     tbl.chromInfo <- tbl_ucsc$chromInfo[match(object@genome$chr, tbl_ucsc$chromInfo$chrom),
         "size"]
     object@genome$size <- tbl.chromInfo
 
-    tbl.gap <- tbl_ucsc$gap[is.element(tbl_ucsc$gap$chrom, object@genome$chr),
-        ]
+    tbl.gap <- tbl_ucsc$gap[is.element(tbl_ucsc$gap$chrom, object@genome$chr),]
+
+
     object@gap <- sort(GRanges(as.vector(tbl.gap$chrom), IRanges(tbl.gap$chromStart +
         1, tbl.gap$chromEnd), seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
 
@@ -196,10 +197,11 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
     }
 
     # CpG probes only
-    probes <- probes[substr(names(probes), 1, 2) == "cg" & is.element(as.vector(seqnames(probes)),
-        object@genome$chr)]
+    ao_probes <- probes[substr(names(probes), 1, 2) == "cg" & is.element(as.vector(seqnames(probes)), object@genome$chr)]
+    object@probes <- sort(GRanges(as.vector(seqnames(ao_probes)), ranges(ao_probes),
+                                  seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
+    object@probes$genes <- ao_probes$genes
 
-    object$probes <- sort(probes)
     message(" - ", length(object@probes), " probes used")
 
     if (!is.null(exclude_regions)) {
@@ -261,7 +263,16 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
     object@bins <- CNV.merge_bins(hg19.anno = object@genome, hg19.tile = anno.tile,
         bin_minprobes = bin_minprobes, hg19.probes = object@probes, bin_maxsize = bin_maxsize)
     message(" - ", length(object@bins), " bins remaining")
+    message("getting the gene annotations for each bin")
 
+    genes <- as.character()
+    for (i in 1:length(object@bins)){
+    genes_per_bin <- as.character(na.omit(unique(subsetByOverlaps(object@probes, object@bins[i], type = "within")$genes)))
+    my_out <- paste(genes_per_bin, sep = "", collapse = "; ")
+    genes <- c(genes, my_out)
+    }
+
+    object@bins$genes <- genes
     return(object)
 }}
 
