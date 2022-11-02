@@ -264,16 +264,13 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
         bin_minprobes = bin_minprobes, hg19.probes = object@probes, bin_maxsize = bin_maxsize)
     message(" - ", length(object@bins), " bins remaining")
 
-    #message("getting the gene annotations for each bin")
+    message("getting the gene annotations for each bin")
 
-   # genes <- as.character()
-   # for (i in 1:length(object@bins)){
-   # genes_per_bin <- as.character(na.omit(unique(subsetByOverlaps(object@probes, object@bins[i], type = "within")$genes)))
-   # my_out <- paste(genes_per_bin, sep = "", collapse = "; ")
-   # genes <- c(genes, my_out)
-   # }
+    o <- findOverlaps(object@probes, object@bins)
+    bin_genes <- sapply(lapply(lapply(split(object@probes$genes[queryHits(o)],
+                                            names(object@bins)[subjectHits(o)]), unique), sort), paste0, collapse=";")
 
-    #object@bins$genes <- genes
+    object@bins$genes <- bin_genes
     return(object)
 }}
 
