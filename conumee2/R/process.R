@@ -111,6 +111,26 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
               message("annotation object finished")
               message(paste(nrow(qload@intensity)," CpGs preserved", sep = ""))
 
+              if (is.null(aobject@genome$pg)) {
+              message("getting the gene annotations for each bin")
+              o <- findOverlaps(aobject@probes, aobject@bins)
+              bin_genes <- sapply(lapply(lapply(split(aobject@probes$genes[queryHits(o)],
+                                                      names(aobject@bins)[subjectHits(o)]), unique), sort), paste0, collapse=";")
+
+              c_bins <- aobject@bins
+              c_bins$genes <- ""
+              c_bins[names(bin_genes)]$genes <- sub(";","", bin_genes)
+              aobject@bins <- c_bins
+              } else {
+              message("getting the gene annotations for each bin")
+
+              o <- findOverlaps(aobject@probes, aobject@bins)
+              bin_genes <- sapply(lapply(lapply(split(aobject@probes$genes[queryHits(o)],
+                                                      names(aobject@bins)[subjectHits(o)]), unique), sort), paste0, collapse=";")
+
+              aobject@bins$genes <- bin_genes
+              }
+
               object <- new("CNV.analysis")
               object@date <- date()
               object@fit$args <- list(intercept = intercept)
