@@ -82,7 +82,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
       object@probes <- sort(GRanges(as.vector(seqnames(mouse_probes)), ranges(mouse_probes),
                                 seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
-      #data("mouse_cpgs")
+      data("mouse_cpgs")
       c_probes <- object@probes
       c_probes$genes <- ""
       c_probes[names(mouse_cpgs)]$genes <- mouse_cpgs$genes
@@ -162,7 +162,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
       c_bins <- object@bins
       c_bins$genes <- ""
-      c_bins[names(bin_genes)] <- bin_genes
+      c_bins[names(bin_genes)]$genes <- sub(";","", bin_genes)
       object@bins <- c_bins
 
       return(object)

@@ -1239,7 +1239,7 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
 
   ggpb$x$data[[1]]$text <- paste0(seqnames(x@anno@bins),"<br>","start: ",
                                   start(x@anno@bins),"<br>","end: ",end(x@anno@bins),"<br>",
-                                  "probes: ",values(x@anno@bins)$probes)
+                                  "probes: ",values(x@anno@bins)$probes, "<br>", "genes:", x@anno@bins$genes)
 
   ggpb$x$data[[2]]$text <- ""
   ggpb$x$data[[3]]$text <- ""
