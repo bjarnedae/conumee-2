@@ -141,7 +141,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
               object@fit$coef <- data.frame(matrix(ncol = 0, nrow = ncol(refload@intensity)))
               object@fit$ratio <- data.frame(matrix(ncol = 0, nrow = length(p)))
               for (i in 1:ncol(qload@intensity)) {
-                message(paste(colnames(query@intensity)[i]), " (",i/ncol(query@intensity)*100, "%", ")", sep = "")
+                message(paste(colnames(query@intensity)[i]), " (",round(i/ncol(query@intensity)*100, digits = 2), "%", ")", sep = "")
                 r <- cor(qload@intensity[p, ], refload@intensity[p, ])[i, ] < 0.99
                 if (any(!r)) message("query sample seems to also be in the reference set. not used for fit.")
                 if (intercept) {
@@ -184,7 +184,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
             object@fit$coef <- data.frame(matrix(ncol = 0, nrow = ncol(ref@intensity)))
             object@fit$ratio <- data.frame(matrix(ncol = 0, nrow = length(p)))
             for (i in 1:ncol(query@intensity)) {
-              message(paste(colnames(query@intensity)[i]), " (",i/ncol(query@intensity)*100, "%", ")", sep = "")
+              message(paste(colnames(query@intensity)[i]), " (",round(i/ncol(query@intensity)*100, digits = 3), "%", ")", sep = "")
               r <- cor(query@intensity[p, ], ref@intensity[p, ])[i, ] < 0.99
               if (any(!r)) message("query sample seems to also be in the reference set. not used for fit.")
               if (intercept) {
