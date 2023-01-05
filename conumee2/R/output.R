@@ -1303,7 +1303,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
   }
 
   par(pty = "s")
-  load("consensus_cancer_genes_hg19")
+  data("consensus_cancer_genes_hg19")
 
   chr <- as.numeric(strsplit(as.character(seqnames(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)])), "chr")[[1]][2])
   pq <- x@anno@genome[chr,3]
