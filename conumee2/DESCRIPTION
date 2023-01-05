@@ -25,6 +25,7 @@ Depends:
     IlluminaHumanMethylationEPICanno.ilm10b4.hg19,
     RnBeads,
     illuminaio
+    BoutrosLab.plotting.general
 Suggests:
     BiocStyle,
     knitr,
