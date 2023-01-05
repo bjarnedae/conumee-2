@@ -181,6 +181,15 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
 
             object@anno <- anno
 
+            c_samples <- ref@intensity
+            means <- apply(c_samples, 1, mean)
+            st_dev <- apply(c_samples, 1, sd)
+            ratio <- st_dev/means
+            c_samples$ratio <- ratio
+            cpgs_exclude <- rownames(c_samples[order(c_samples$ratio, decreasing = TRUE),][1:(0.2*nrow(c_samples)),])
+
+            object@fit$exclude <- cpgs_exclude
+
             object@fit$coef <- data.frame(matrix(ncol = 0, nrow = ncol(ref@intensity)))
             object@fit$ratio <- data.frame(matrix(ncol = 0, nrow = length(p)))
             for (i in 1:ncol(query@intensity)) {

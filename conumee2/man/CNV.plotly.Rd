@@ -9,8 +9,8 @@ CNV.plotly(x, sample_name = colnames(x@fit$coef)[1])
 \arguments{
 \item{x}{A \code{CNVanalysis} object after \code{CNV.segment} is performed.}
 
-\item{sample_name}{character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(x@fit$coef)}}
+\item{sample_name}{character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(object@fit$ratio)}}
 }
 \description{
-\code{CNV.plotly} plots an interactive copy number profile
+\code{CNV.plotly} plots an interactive copy number profile.
 }

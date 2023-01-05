@@ -24,7 +24,7 @@ Depends:
     IlluminaHumanMethylationEPICmanifest,
     IlluminaHumanMethylationEPICanno.ilm10b4.hg19,
     RnBeads,
-    illuminaio
+    illuminaio,
     BoutrosLab.plotting.general
 Suggests:
     BiocStyle,

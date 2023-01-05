@@ -14,7 +14,7 @@ CNV.create_anno(
 )
 }
 \arguments{
-\item{bin_minprobes}{numeric. Minimum number of probes per bin. Bins are interatively merged with neighboring bin until minimum number is reached.}
+\item{bin_minprobes}{numeric. Minimum number of probes per bin. Bins are iteratively merged with neighboring bin until minimum number is reached.}
 
 \item{bin_minsize}{numeric. Minimum size of a bin.}
 

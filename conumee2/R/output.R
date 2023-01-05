@@ -10,6 +10,9 @@
     xx
 }
 
+
+#'
+#'
 #' CNV.genomeplot
 #' @description Create CNV plot for the whole genome or chromosomes. If the \code{CNV.analysis} object holds the information for multiple samples, the plots get either loaded individually in the graphical output or directly saved as .pdf or .png files.
 #' @param object \code{CNV.analysis} object.
@@ -1160,10 +1163,10 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
 
 #' CNV.plotly
 #'
-#' \code{CNV.plotly} plots an interactive copy number profile
+#' \code{CNV.plotly} plots an interactive copy number profile.
 #'
 #' @param x A \code{CNVanalysis} object after \code{CNV.segment} is performed.
-#' @param sample_name character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(x@@fit$coef)}
+#' @param sample_name character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(object@@fit$ratio)}
 #' @export
 #' @import ggplot2
 #' @import plotly
@@ -1249,5 +1252,123 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
   ggpb$x$data[[5]]$text <- values(x@anno@detail)$name
   suppressWarnings(ggpb%>%toWebGL())
 }
+
+
+
+#' CNV.qqplot
+#' @description Create a qqplot for the chromosome arm that contains the gene of interest. This plot should be used supportively to investigate diagnostically relevant high-level changes in the copy number.
+#' @param object \code{CNV.analysis} object.
+#' @param sample character. If \code{CNV.analysis} object contains multiple samples, please specify the sample name. You can check the sample names with \code{colnames(object@@fit$ratio)}. If the object contains just one sample, this parameter can be left blank.
+#' @param gene character. Please provide the gene symbol for the gene of interest. You can use this function for every gene that is part of the Cancer Gene Census (curated by the Sanger Institute).
+#' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.
+#' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1L}.
+#' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
+#' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
+#' @return \code{NULL}.
+#' @details This function creates a qqplot that illustrates if a gene of interest is part of the normal distribution of the bins' log2-ratios in the corresponding chromosome arm or if it should be considered as an outlier. The latter might indicate a high level change in copy number. To create the confidence intervals, the \code{BoutrosLab.plotting.general} package is used with \code{method = pointwise}.
+#' @examples
+#'
+#' CNV.qqplot(x, gene = "EGFR", conf = 0.99, minoverlap = 10000L)
+#'
+#' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
+#' @import BoutrosLab.plotting.general
+#' @export
+setGeneric("CNV.qqplot", function(object, ...) {
+  standardGeneric("CNV.qqplot")
+})
+
+#' @rdname CNV.qqplot
+setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sample = as.character(), gene = as.character(), conf = 0.99, minoverlap = 1L, set_par = TRUE,
+                                                                     ...) {
+
+  if (length(gene)== 0) {
+    stop("Please provide a valid gene symbol. Check data(`consensus_cancer_genes_hg19`) for details.")
+  }
+
+  if (set_par) {
+    mfrow_original <- par()$mfrow
+    mar_original <- par()$mar
+    oma_original <- par()$oma
+  }
+
+  if(ncol(object@fit$ratio) == 1){
+    n =1
+  }
+
+  if(ncol(object@fit$ratio) > 1){
+    if (length(sample) ==0){
+      stop("Please provide a valid sample name when the CNV analysis object comprises multiple samples. Check colnames(object@fit$ratio) for details.")
+    }
+    n = which(colnames(object@fit$ratio) == sample)
+  }
+
+  par(pty = "s")
+  load("consensus_cancer_genes_hg19")
+
+  chr <- as.numeric(strsplit(as.character(seqnames(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)])), "chr")[[1]][2])
+  pq <- x@anno@genome[chr,3]
+
+  if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) < pq) {
+
+    shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
+    first <- IRanges(start = 1, end = object@anno@genome[chr,3])
+    first <- GRanges(seqnames = rownames(object@anno@genome)[chr], first)
+
+    h.1 <- findOverlaps(query = object@anno@bins, subject = first, type = "within", ignore.strand = TRUE)
+    ind.1 <- queryHits(h.1)
+    names.1 <- names(object@anno@bins[ind.1])
+
+    c.intervals <- BoutrosLab.plotting.general::create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
+    qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = 0.8, plot.it = FALSE)
+    y.c <- qq.plot$y
+
+    h <- findOverlaps(query = consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)], subject = object@anno@bins, minoverlap = minoverlap)
+    bin_names <- names(object@anno@bins[subjectHits(h)])
+    ind <- which(names(y.c) %in% bin_names)
+
+    col <- rep("black", length(y.c))
+    col[ind] <- "red"
+    cex <- rep(0.5, length(y.c))
+    cex[ind] <- 1.2
+
+    qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene)
+    qqline(shifted.ratios[names.1])
+    lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
+    lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
+  }
+
+  if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) > pq) {
+
+    shifted.ratios <- x@bin$ratio[[1]] - x@bin$shift
+    second <- IRanges(start = x@anno@genome[chr,3]+1, end = x@anno@genome[chr,2])
+    second <- GRanges(seqnames = rownames(x@anno@genome)[chr], second)
+
+    h.2 <- findOverlaps(query = x@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
+    ind.2 <- queryHits(h.2)
+    names.2 <- names(x@anno@bins[ind.2])
+
+    c.intervals <- BoutrosLab.plotting.general::create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
+    qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
+    y.c <- qq.plot$y
+
+    h <- findOverlaps(query = consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)], subject = object@anno@bins, minoverlap = minoverlap)
+    bin_names <- names(object@anno@bins[subjectHits(h)])
+    ind <- which(names(y.c) %in% bin_names)
+
+    col <- rep("black", length(y.c))
+    col[ind] <- "red"
+    cex <- rep(0.5, length(y.c))
+    cex[ind] <- 1.2
+
+    qqnorm(shifted.ratios[names.2], pch= 16, cex = cex, col = col, main = gene)
+    qqline(shifted.ratios[names.2])
+    lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
+    lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
+  }
+
+  if (set_par)
+    par(mfrow = mfrow_original, mar = mar_original, oma = oma_original)
+
+})
 
 
