@@ -25,14 +25,15 @@ CNV.detailplot_wrap(object, ...)
 
 \item{...}{Additional paramters supplied to \code{CNV.detailplot}.}
 
-\item{set_par}{logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
-#' @param directory character. Export directory for saving the files}
+\item{set_par}{logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.}
 
 \item{main}{character. Used for \code{CNV.detailplot}. do not manipulate}
 
 \item{header}{character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length than the number of samples.}
 
 \item{output}{character. Choose between \code{pdf} and \code{png}. Defaults to \code{NULL}}
+
+\item{directory}{character. Export directory for saving the files}
 
 \item{width}{numeric. Width in inches of the saved files. Defaults to \code{12}.}
 

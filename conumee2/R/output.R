@@ -580,7 +580,7 @@ setMethod("CNV.detailplot", signature(object = "CNV.analysis"),
 #' @description Create CNV plots for all detail regions. If the \code{CNV.analysis} object holds the information for multiple samples, the plots get either loaded individually in the graphical output or directly saved as .pdf or .png files.
 #' @param object \code{CNV.analysis} object.
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
-#' #' @param directory character. Export directory for saving the files
+#' @param directory character. Export directory for saving the files
 #' @param output character. Choose between \code{pdf} and \code{png}. Defaults to \code{NULL}
 #' @param width numeric. Width in inches of the saved files. Defaults to \code{12}.
 #' @param height numeric. Height in inches of the saved files. Defaults to \code{8}
@@ -1265,7 +1265,8 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
 #' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
 #' @return \code{NULL}.
-#' @details This function creates a qqplot that illustrates if a gene of interest is part of the normal distribution of the bins' log2-ratios in the corresponding chromosome arm or if it should be considered as an outlier. The latter might indicate a high level change in copy number. To create the confidence intervals, the \code{BoutrosLab.plotting.general} package is used with \code{method = pointwise}.
+#' @details This function creates a qqplot that illustrates if a gene of interest is part of the normal distribution of the bins' log2-ratios in the corresponding chromosome arm or if it should be considered as an outlier. The latter might indicate a high level change in copy number.
+#' To create the confidence intervals, the \code{BoutrosLab.plotting.general} package is used with \code{method = pointwise}. Bins that overlap the gene of interest are highlighted in red.
 #' @examples
 #'
 #' CNV.qqplot(x, gene = "EGFR", conf = 0.99, minoverlap = 10000L)

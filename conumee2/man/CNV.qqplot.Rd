@@ -39,7 +39,8 @@ CNV.qqplot(object, ...)
 Create a qqplot for the chromosome arm that contains the gene of interest. This plot should be used supportively to investigate diagnostically relevant high-level changes in the copy number.
 }
 \details{
-This function creates a qqplot that illustrates if a gene of interest is part of the normal distribution of the bins' log2-ratios in the corresponding chromosome arm or if it should be considered as an outlier. The latter might indicate a high level change in copy number. To create the confidence intervals, the \code{BoutrosLab.plotting.general} package is used with \code{method = pointwise}.
+This function creates a qqplot that illustrates if a gene of interest is part of the normal distribution of the bins' log2-ratios in the corresponding chromosome arm or if it should be considered as an outlier. The latter might indicate a high level change in copy number.
+To create the confidence intervals, the \code{BoutrosLab.plotting.general} package is used with \code{method = pointwise}. Bins that overlap the gene of interest are highlighted in red.
 }
 \examples{
 

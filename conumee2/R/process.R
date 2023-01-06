@@ -358,6 +358,109 @@ setMethod("CNV.detail", signature(object = "CNV.analysis"), function(object) {
 })
 
 
+#' @import BoutrosLab.plotting.general
+NULL
+
+#' CNV.focal
+#' @description This optional function provides filtering for diagnostically relevant CNVs (high level amplification or homozygous deletion).
+#' @param object \code{CNV.analysis} object.
+#' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.
+#' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1L}.
+#' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
+#' @return A \code{CNV.analysis} object with significantly altered bins and genes from the Cancer Gene Census (curated by the Sanger Institute).
+#' @details This function should facilitate the detection of diagnostically relevant CNVs that affect single genes. Therefore, a qqplot illustrating the bins' log2-ratios is created for each chromosome arm. In the first step, bins that lie outside the confidence interval are identified and sorted based on their residuals to the confidence curves.
+#' Secondly, these bins are overlapped with the Cancer Gene Census to identify diagnostically relevant genes. The resulting bins and genes are sorted in regards to their significance.
+#' @examples
+#'
+#' x <- CNV.focal(object, conf = 0.99, minoverlap = 10000L)
+#' x@@detail$cancer_genes
+#' x@@detail$significant_bins
+#'
+#' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
+#' @export
+setGeneric("CNV.focal", function(object, ...) {
+  standardGeneric("CNV.focal")
+})
+
+#' @rdname CNV.focal
+setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.99, minoverlap = 1L,...){
+
+  if(ncol(object@anno@genome) == 2) {
+    stop("CNV.focal is not compatible with mouse arrays.")
+  }
+
+  data("consensus_cancer_genes_hg19")
+
+  significant.bins <- vector(mode = "list", length = ncol(object@fit$ratio))
+  cancer.genes <- vector(mode = "list", length = ncol(object@fit$ratio))
+
+  for (i in 1:ncol(object@fit$ratio)){
+
+    message(paste(colnames(object@fit$ratio)[i]), " (",round(i/ncol(object@fit$ratio)*100, digits = 3), "%", ")", sep = "")
+
+    bin.ratios <- x@bin$ratio[[i]] - x@bin$shift[i]
+
+    residuals <- as.character() #inner loop
+    for (j in 1:nrow(object@anno@genome)) {
+      first <- IRanges(start = 1, end = object@anno@genome[j,3])
+      first <- GRanges(seqnames = rownames(object@anno@genome)[j], first)
+      second <- IRanges(start = object@anno@genome[j,3]+1, end = object@anno@genome[j,2])
+      second <- GRanges(seqnames = rownames(object@anno@genome)[j], second)
+
+      h.1 <- findOverlaps(query = object@anno@bins, subject = first, type = "within", ignore.strand = TRUE)
+      ind.1 <- queryHits(h.1)
+
+      h.2 <- findOverlaps(query = object@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
+      ind.2 <- queryHits(h.2)
+
+      names.1 <- names(object@anno@bins[ind.1])
+      names.2 <- names(object@anno@bins[ind.2])
+
+      if (length(names.1)>0) {
+        c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
+        qq.plot <- qqnorm(bin.ratios[names.1], plot.it = FALSE)
+        y.c <- qq.plot$y[order(qq.plot$x)]
+        upper.outliers <- which(y.c>c.intervals$upper.pw)
+        upper.residuals <- y.c[upper.outliers] - c.intervals$upper.pw[upper.outliers]
+        lower.outliers <- which(y.c<c.intervals$lower.pw)
+        lower.residuals <- y.c[lower.outliers] - c.intervals$lower.pw[lower.outliers]
+        residuals.1 <- c(abs(upper.residuals), abs(lower.residuals))
+      }
+
+      if (length(names.2)>0) {
+        c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
+        qq.plot <- qqnorm(bin.ratios[names.2], plot.it = FALSE)
+        y.c <- qq.plot$y[order(qq.plot$x)]
+        upper.outliers <- which(y.c>c.intervals$upper.pw)
+        upper.residuals <- y.c[upper.outliers] - c.intervals$upper.pw[upper.outliers]
+        lower.outliers <- which(y.c<c.intervals$lower.pw)
+        lower.residuals <- y.c[lower.outliers] - c.intervals$lower.pw[lower.outliers]
+        residuals.2 <- c(abs(upper.residuals), abs(lower.residuals))
+      }
+
+      my_out <- c(residuals.1, residuals.2)
+      residuals <- c(residuals, my_out)
+    } #inner loop end
+
+    outliers <- names(sort(residuals, decreasing = TRUE))
+    significant.bins[[i]] <- x@anno@bins[outliers]
+
+    h.cancer_genes <- findOverlaps(query = object@anno@bins[outliers], subject = consensus_cancer_genes_hg19, minoverlap = minoverlap)
+    significant.genes <- consensus_cancer_genes_hg19$SYMBOL[unique(subjectHits(h.cancer_genes))]
+    cancer.genes[[i]] <- significant.genes
+
+  }
+
+  names(significant.bins) <- colnames(object@fit$ratio)
+  names(cancer.genes) <- colnames(object@fit$ratio)
+  object@detail$significant_bins <- significant.bins
+  object@detail$cancer_genes <- cancer.genes
+
+  return(object)
+
+})
+
+
 #' @import DNAcopy
 NULL
 
