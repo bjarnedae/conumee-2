@@ -1296,9 +1296,10 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
     n =1
   }
 
+
   if(ncol(object@fit$ratio) > 1){
     if (length(sample) ==0){
-      stop("Please provide a valid sample name when the CNV analysis object comprises multiple samples. Check colnames(object@fit$ratio) for details.")
+      stop("Please provide a valid sample name if the CNV analysis object comprises multiple samples. Check colnames(object@fit$ratio) for details.")
     }
     n = which(colnames(object@fit$ratio) == sample)
   }
@@ -1340,7 +1341,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
 
   if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) > pq) {
 
-    shifted.ratios <- x@bin$ratio[[1]] - x@bin$shift
+    shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
     second <- IRanges(start = x@anno@genome[chr,3]+1, end = x@anno@genome[chr,2])
     second <- GRanges(seqnames = rownames(x@anno@genome)[chr], second)
 
