@@ -340,9 +340,7 @@ setMethod("CNV.detail", signature(object = "CNV.analysis"), function(object) {
     message("no detail regions provided, define using CNV.create_anno")
   } else {
     d1 <- as.matrix(findOverlaps(query = object@anno@detail, subject = object@anno@probes))
-    d2 <- data.frame(detail = values(object@anno@detail)$name[d1[,
-                                                                 "queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),
-                     stringsAsFactors = FALSE)
+    d2 <- data.frame(detail = values(object@anno@detail)$name[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
 
 
     object@detail$ratio <- vector(mode = "list", length = ncol(object@fit$ratio))
@@ -398,9 +396,9 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
 
     message(paste(colnames(object@fit$ratio)[i]), " (",round(i/ncol(object@fit$ratio)*100, digits = 3), "%", ")", sep = "")
 
-    bin.ratios <- x@bin$ratio[[i]] - x@bin$shift[i]
+    bin.ratios <- object@bin$ratio[[i]] - object@bin$shift[i]
 
-    residuals <- as.character() #inner loop
+    residuals <- as.numeric() #inner loop
     for (j in 1:nrow(object@anno@genome)) {
       first <- IRanges(start = 1, end = object@anno@genome[j,3])
       first <- GRanges(seqnames = rownames(object@anno@genome)[j], first)
@@ -440,12 +438,14 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
 
       my_out <- c(residuals.1, residuals.2)
       residuals <- c(residuals, my_out)
+      residuals.1 <- NULL
+      residuals.2 <- NULL
     } #inner loop end
 
-    outliers <- names(sort(residuals, decreasing = TRUE))
-    significant.bins[[i]] <- x@anno@bins[outliers]
+    outliers <- sort(residuals, decreasing = TRUE)
+    significant.bins[[i]] <- object@anno@bins[names(outliers)]
 
-    h.cancer_genes <- findOverlaps(query = object@anno@bins[outliers], subject = consensus_cancer_genes_hg19, minoverlap = minoverlap)
+    h.cancer_genes <- findOverlaps(query = object@anno@bins[names(outliers)], subject = consensus_cancer_genes_hg19, minoverlap = minoverlap)
     significant.genes <- consensus_cancer_genes_hg19$SYMBOL[unique(subjectHits(h.cancer_genes))]
     cancer.genes[[i]] <- significant.genes
 
