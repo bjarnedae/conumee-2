@@ -363,7 +363,7 @@ NULL
 #' @description This optional function provides filtering for diagnostically relevant CNVs (high level amplification or homozygous deletion).
 #' @param object \code{CNV.analysis} object.
 #' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.
-#' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1L}.
+#' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1000L}.
 #' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
 #' @return A \code{CNV.analysis} object with significantly altered bins and genes from the Cancer Gene Census (curated by the Sanger Institute).
 #' @details This function should facilitate the detection of diagnostically relevant CNVs that affect single genes. Therefore, a qqplot illustrating the bins' log2-ratios is created for each chromosome arm. In the first step, bins that lie outside the confidence interval are identified and sorted based on their residuals to the confidence curves.
@@ -381,7 +381,7 @@ setGeneric("CNV.focal", function(object, ...) {
 })
 
 #' @rdname CNV.focal
-setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.99, minoverlap = 1L,...){
+setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.99, minoverlap = 1000L,...){
 
   if(ncol(object@anno@genome) == 2) {
     stop("CNV.focal is not compatible with mouse arrays.")
