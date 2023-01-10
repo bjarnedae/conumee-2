@@ -1296,7 +1296,6 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
     n =1
   }
 
-
   if(ncol(object@fit$ratio) > 1){
     if (length(sample) ==0){
       stop("Please provide a valid sample name if the CNV analysis object comprises multiple samples. Check colnames(object@fit$ratio) for details.")
@@ -1308,7 +1307,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
   data("consensus_cancer_genes_hg19")
 
   chr <- as.numeric(strsplit(as.character(seqnames(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)])), "chr")[[1]][2])
-  pq <- x@anno@genome[chr,3]
+  pq <- object@anno@genome[chr,3]
 
   if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) < pq) {
 
@@ -1342,12 +1341,12 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
   if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) > pq) {
 
     shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
-    second <- IRanges(start = x@anno@genome[chr,3]+1, end = x@anno@genome[chr,2])
-    second <- GRanges(seqnames = rownames(x@anno@genome)[chr], second)
+    second <- IRanges(start = object@anno@genome[chr,3]+1, end = object@anno@genome[chr,2])
+    second <- GRanges(seqnames = rownames(object@anno@genome)[chr], second)
 
-    h.2 <- findOverlaps(query = x@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
+    h.2 <- findOverlaps(query = object@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
     ind.2 <- queryHits(h.2)
-    names.2 <- names(x@anno@bins[ind.2])
+    names.2 <- names(object@anno@bins[ind.2])
 
     c.intervals <- BoutrosLab.plotting.general::create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
     qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
