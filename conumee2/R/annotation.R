@@ -213,7 +213,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
     if (is.element(array_type, "EPICv2")) {
       message("getting EPICv2 annotations")
-      #data("EPICv2_hg19_probes") # adding that!
+      data("EPICv2_hg19_probes")
       probesEPICv2 <- sort(EPICv2_hg19_probes)
     }
 
