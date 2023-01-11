@@ -6,8 +6,6 @@
 #' @param ref \code{CNV.data} object of reference set.
 #' @param anno \code{CNV.anno} object. Use \code{CNV.create_anno} do create.
 #' @param intercept logical. Should intercept be considered? Defaults to \code{TRUE}.
-#' @param reduce_noise logical. Should the noise be reduced by excluding the probes with the lowest combined signal intensities among the set of control probes? Defaults to \code{FALSE}. For details see the publication.
-#' @param perc_cpgs numeric. What percentage of CpGs should be excluded if \code{reduce_noise} it set to \code{TRUE}? Defaults to \code{0.2}.
 #' @param ... Additional parameters (\code{CNV.fit} generic, currently not used).
 #' @return \code{CNV.analysis} object.
 #' @details The log2 ratio of query intensities versus a linear combination of reference set intensities that best reflects query intensities is calculated (as determined by linear regression). Every query sample in the \code{CNV.analysis} object is compared to the linear combination fo control samples individually. The annotations provided to \code{CNV.fit} are saved within the returned \code{CNV.analysis} object and used for subsequent analysis steps.
@@ -59,156 +57,30 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
             if (!all(is.element(p, rownames(ref@intensity))))
               stop("reference set intensities not given for all probes.")
 
-            if (reduce_noise) {
-              message("identifying and excluding most variable probes among the set of control samples") #reduce noise beginning
-
-              c_samples <- ref@intensity
-              means <- apply(c_samples, 1, mean)
-              st_dev <- apply(c_samples, 1, sd)
-              ratio <- st_dev/means
-              c_samples$ratio <- ratio
-              cpgs_exclude <- rownames(c_samples[order(c_samples$ratio, decreasing = TRUE),][1:(perc_cpgs*nrow(c_samples)),])
-
-
-              qload <- query
-              refload <- ref
-
-              ind_del_query <- which(rownames(qload@intensity) %in% cpgs_exclude) #identifying CpGs that should be excluded
-
-              if (ncol(qload@intensity) == 1) {
-                qload@intensity <- as.data.frame(qload@intensity[-ind_del_query,], row.names = rownames(qload@intensity)[-ind_del_query])
-              } else {
-              qload@intensity <- qload@intensity[-ind_del_query,]
-              }
-
-              ind_del_ref <- which(rownames(refload@intensity) %in% cpgs_exclude)
-              refload@intensity <- refload@intensity[-ind_del_ref,]
-
-              message ("modifying annotation object for CVN.fit()")
-              aobject <- anno
-
-              ind_del_ao <- which(names(aobject@probes) %in% cpgs_exclude)
-              aobject@probes <- anno@probes[-ind_del_ao,]
-              #changing the annotation object
-
-              message("creating new bins")
-              anno.tile <- CNV.create_bins(hg19.anno = aobject@genome, bin_minsize = aobject@args$bin_minsize,
-                                           hg19.gap = aobject@gap, hg19.exclude = aobject@exclude)
-              message(" - ", length(anno.tile), " bins created")
-
-              message("merging new bins")
-
-              if (is.null(aobject@genome$pg)) {
-
-              aobject@bins <- CNV.merge_bins_mice(hg19.anno = aobject@genome, hg19.tile = anno.tile,
-                                                  bin_minprobes = aobject@args$bin_minprobes, hg19.probes = aobject@probes, bin_maxsize = aobject@args$bin_maxsize)
-              } else {
-
-              aobject@bins <- CNV.merge_bins(hg19.anno = aobject@genome, hg19.tile = anno.tile,
-                                                    bin_minprobes = aobject@args$bin_minprobes, hg19.probes = aobject@probes, bin_maxsize = aobject@args$bin_maxsize)
-              }
-              message(" - ", length(aobject@bins), " bins remaining")
-              message("annotation object finished")
-              message(paste(nrow(qload@intensity)," CpGs preserved", sep = ""))
-
-              if (is.null(aobject@genome$pg)) {
-              message("getting the gene annotations for each bin")
-              o <- findOverlaps(aobject@probes, aobject@bins)
-              bin_genes <- sapply(lapply(lapply(split(aobject@probes$genes[queryHits(o)],
-                                                      names(aobject@bins)[subjectHits(o)]), unique), sort), paste0, collapse=";")
-
-              c_bins <- aobject@bins
-              c_bins$genes <- ""
-              c_bins[names(bin_genes)]$genes <- sub(";","", bin_genes)
-              aobject@bins <- c_bins
-              } else {
-              message("getting the gene annotations for each bin")
-
-              o <- findOverlaps(aobject@probes, aobject@bins)
-              bin_genes <- sapply(lapply(lapply(split(aobject@probes$genes[queryHits(o)],
-                                                      names(aobject@bins)[subjectHits(o)]), unique), sort), paste0, collapse=";")
-
-              aobject@bins$genes <- bin_genes
-              }
-
-              object <- new("CNV.analysis")
-              object@date <- date()
-              object@fit$args <- list(intercept = intercept)
-
-              object@anno <- aobject
-
-              p <- unique(names(aobject@probes))
-              object@fit$coef <- data.frame(matrix(ncol = 0, nrow = ncol(refload@intensity)))
-              object@fit$ratio <- data.frame(matrix(ncol = 0, nrow = length(p)))
-              for (i in 1:ncol(qload@intensity)) {
-                message(paste(colnames(query@intensity)[i]), " (",round(i/ncol(query@intensity)*100, digits = 2), "%", ")", sep = "")
-                r <- cor(qload@intensity[p, ], refload@intensity[p, ])[i, ] < 0.99
-                if (any(!r)) message("query sample seems to also be in the reference set. not used for fit.")
-                if (intercept) {
-                  ref.fit <- lm(y ~ ., data = data.frame(y = qload@intensity[p,
-                                                                             i], X = refload@intensity[p, r]))
-                } else {
-                  ref.fit <- lm(y ~ . - 1, data = data.frame(y = qload@intensity[p,
-                                                                                 i], X = refload@intensity[p, r]))
-                }
-                object@fit$coef <- cbind(object@fit$coef,as.numeric(ref.fit$coefficients[-1]))
-
-                ref.predict <- predict(ref.fit)
-                ref.predict[ref.predict < 1] <- 1
-
-                object@fit$ratio <- cbind(object@fit$ratio, as.numeric(log2(qload@intensity[p, i]/ref.predict[p])))
-              }
-              colnames(object@fit$coef) <- colnames(query@intensity)
-              rownames(object@fit$coef) <- colnames(refload@intensity)
-              colnames(object@fit$ratio) <- colnames(query@intensity)
-              rownames(object@fit$ratio) <- p
-
-
-
-
-              object@fit$noise <- as.numeric()
-              for (i in 1:ncol(qload@intensity)) {
-                object@fit$noise <- c(object@fit$noise, sqrt(mean((object@fit$ratio[-1,i] - object@fit$ratio[-nrow(object@fit$ratio),i])^2,
-                                                                  na.rm = TRUE)))
-              }
-              names(object@fit$noise) <- colnames(query@intensity)
-              return(object)          #reduce noise end
-            } else {
-
             object <- new("CNV.analysis")
             object@date <- date()
             object@fit$args <- list(intercept = intercept)
 
             object@anno <- anno
 
-            c_samples <- ref@intensity
-            means <- apply(c_samples, 1, mean)
-            st_dev <- apply(c_samples, 1, sd)
-            ratio <- st_dev/means
-            c_samples$ratio <- ratio
-            cpgs_exclude <- rownames(c_samples[order(c_samples$ratio, decreasing = TRUE),][1:(0.2*nrow(c_samples)),])
-
-            object@fit$exclude <- cpgs_exclude
-
             object@fit$coef <- data.frame(matrix(ncol = 0, nrow = ncol(ref@intensity)))
             object@fit$ratio <- data.frame(matrix(ncol = 0, nrow = length(p)))
             for (i in 1:ncol(query@intensity)) {
+
               message(paste(colnames(query@intensity)[i]), " (",round(i/ncol(query@intensity)*100, digits = 3), "%", ")", sep = "")
               r <- cor(query@intensity[p, ], ref@intensity[p, ])[i, ] < 0.99
               if (any(!r)) message("query sample seems to also be in the reference set. not used for fit.")
               if (intercept) {
-                ref.fit <- lm(y ~ ., data = data.frame(y = query@intensity[p,
-                                                                           i], X = ref@intensity[p, r]))
+                ref.fit <- lm(y ~ ., data = data.frame(y = log2(query@intensity[p,i]), X = log2(ref@intensity[p, r])))
               } else {
-                ref.fit <- lm(y ~ . - 1, data = data.frame(y = query@intensity[p,
-                                                                               i], X = ref@intensity[p, r]))
+                ref.fit <- lm(y ~ . - 1, data = data.frame(y = log2(query@intensity[p,i]), X = log2(ref@intensity[p, r])))
               }
               object@fit$coef <- cbind(object@fit$coef,as.numeric(ref.fit$coefficients[-1]))
 
               ref.predict <- predict(ref.fit)
               ref.predict[ref.predict < 1] <- 1
 
-              object@fit$ratio <- cbind(object@fit$ratio, as.numeric(log2(query@intensity[p, i]/ref.predict[p])))
+              object@fit$ratio <- cbind(object@fit$ratio, log2(query@intensity[p,i]) - ref.predict[p])
             }
 
 
@@ -219,12 +91,12 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
 
             object@fit$noise <- as.numeric()
             for (i in 1:ncol(query@intensity)) {
-              object@fit$noise <- c(object@fit$noise, sqrt(mean((object@fit$ratio[-1,i] - object@fit$ratio[-nrow(object@fit$ratio),i])^2,
-                                                                na.rm = TRUE)))
+              object@fit$noise <- c(object@fit$noise, sqrt(mean((object@fit$ratio[-1,i] - object@fit$ratio[-nrow(object@fit$ratio),i])^2,na.rm = TRUE)))
             }
+
             names(object@fit$noise) <- colnames(query@intensity)
             return(object)
-          }})
+          })
 
 
 #' CNV.bin
@@ -275,19 +147,26 @@ setMethod("CNV.bin", signature(object = "CNV.analysis"), function(object) {
                    probe = names(object@anno@probes)[o1[, "subjectHits"]], stringsAsFactors = FALSE)
 
   object@bin$ratio <- vector(mode = "list", length = ncol(object@fit$ratio))
+  object@bin$variance <- vector(mode = "list", length = ncol(object@fit$ratio))
   object@bin$shift <- as.numeric()
   for (i in 1:ncol(object@fit$ratio)) {
-    object@bin$ratio[[i]] <- sapply(split(object@fit$ratio[o2[, "probe"],i], o2[,
-                                                                                "bin"]), median, na.rm = TRUE)[names(object@anno@bins)]
-    if (any(is.na(object@bin$ratio[[i]]))) {
-      stop("not every bin contains at least one CpG, please reduce perc_cpgs in CNV.fit()")
-   }
 
-    object@bin$shift <- c(object@bin$shift, optim(0, function(s) median(abs(object@bin$ratio[[i]] -s),
-                                                                        na.rm = TRUE), method = "Brent", lower = -100, upper = 100)$par)
+    message(paste(colnames(object@fit$ratio)[i]), " (",round(i/ncol(object@fit$ratio)*100, digits = 3), "%", ")", sep = "")
+
+    object@bin$ratio[[i]] <- sapply(split(object@fit$ratio[o2[, "probe"],i], o2[,"bin"]),
+                                    median, na.rm = TRUE)[names(object@anno@bins)]
+
+    object@bin$variance[[i]] <- sapply(split(object@fit$ratio[o2[, "probe"],i], o2[,"bin"]),
+                                       var, na.rm = TRUE)[names(object@anno@bins)]
+
+    object@bin$shift <- c(object@bin$shift, optim(0, function(s) median(abs(object@bin$ratio[[i]] -s),na.rm = TRUE),
+                                                  method = "Brent", lower = -100, upper = 100)$par)
   }
+
   names(object@bin$shift) <- colnames(object@fit$ratio)
   names(object@bin$ratio) <- colnames(object@fit$ratio)
+  names(object@bin$variance) <- colnames(object@fit$ratio)
+
   return(object)
 })
 
@@ -440,7 +319,7 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
       residuals <- c(residuals, my_out)
       residuals.1 <- NULL
       residuals.2 <- NULL
-    } #inner loop end
+    }
 
     outliers <- sort(residuals, decreasing = TRUE)
     significant.bins[[i]] <- object@anno@bins[names(outliers)]
@@ -512,11 +391,12 @@ setGeneric("CNV.segment", function(object, ...) {
 setMethod("CNV.segment", signature(object = "CNV.analysis"), function(object,
                                                                       alpha = 0.001, nperm = 50000, min.width = 5, undo.splits = "sdundo",
                                                                       undo.SD = 2.2, verbose = 0, ...) {
-  # if(length(object@fit) == 0) stop('fit unavailable, run CNV.fit')
-  if (length(object@bin) == 0)
+  if(length(object@fit) == 0){
+    stop('fit unavailable, run CNV.fit')
+  }
+  if (length(object@bin) == 0){
     stop("bin unavailable, run CNV.bin")
-  # if(length(object@detail) == 0) stop('bin unavailable, run
-  # CNV.detail')
+  }
 
   a1 <- formals()
   a2 <- as.list(match.call())[-1]
@@ -526,14 +406,19 @@ setMethod("CNV.segment", signature(object = "CNV.analysis"), function(object,
 
   object@seg$summary <- vector(mode = "list", length = ncol(object@fit$ratio))
   object@seg$p <- vector(mode = "list", length = ncol(object@fit$ratio))
+
   for (i in 1:ncol(object@fit$ratio)) {
-    message(colnames(object@fit$ratio)[i])
+
+    message(paste(colnames(object@fit$ratio)[i]), " (",round(i/ncol(object@fit$ratio)*100, digits = 3), "%", ")", sep = "")
+
     x1 <- DNAcopy::CNA(genomdat = object@bin$ratio[[i]][names(object@anno@bins)],
                        chrom = as.vector(seqnames(object@anno@bins)), maploc = values(object@anno@bins)$midpoint,
                        data.type = "logratio", sampleid = "sampleid")
-    x2 <- DNAcopy::segment(x = x1, verbose = verbose, min.width = min.width,
+
+    x2 <- DNAcopy::segment(x = x1, weights = 1/object@bin$variance[[i]][names(object@anno@bins)], verbose = verbose, min.width = min.width,
                            nperm = nperm, alpha = alpha, undo.splits = undo.splits, undo.SD = undo.SD,
                            ...)
+
     object@seg$summary[[i]] <- DNAcopy::segments.summary(x2)
     object@seg$summary[[i]]$chrom <- as.vector(object@seg$summary[[i]]$chrom)
     object@seg$summary[[i]]$ID <- colnames(object@fit$ratio)[i]
