@@ -41,8 +41,8 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
     if (is.null(array_type)) {
       array_type <- "450k"
     }
-    if (!is.element(array_type, c("450k", "EPIC", "mouse","overlap"))) {
-      stop("array_type must be on of 450k, EPIC, mouse or overlap")
+    if (!is.element(array_type, c("450k", "EPIC","EPICv2", "mouse","overlap"))) {
+      stop("array_type must be on of 450k, EPIC, EPICv2, mouse or overlap")
     }
 
   #mouse beginning
@@ -166,6 +166,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
       }
     #mouse end
+
     else {
         object@genome <- data.frame(chr = paste("chr", 1:22, sep = ""), stringsAsFactors = FALSE)
 
@@ -185,6 +186,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
     tbl.cytoBand <- tbl_ucsc$cytoBand[is.element(tbl_ucsc$cytoBand$chrom,
         object@genome$chr), ]
+
     # find the gap that is overlapping with the end of the last p-band, use
     # center of that gap for indicating centromers in the genome plots
     pq <- sapply(split(tbl.cytoBand$chromEnd[grepl("p", tbl.cytoBand$name)],
@@ -193,7 +195,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
     object@genome$pq <- start(resize(subsetByOverlaps(object@gap, GRanges(names(pq),
         IRanges(pq, pq))), 1, fix = "center"))
 
-    probes450k <- probesEPIC <- GRanges()
+    probes450k <- probesEPIC <- probesEPICv2 <- GRanges()
     if (is.element(array_type, c("450k", "overlap"))) {
       message("getting 450k annotations")
       data("UCSC_RefGene_Name_450k")
@@ -208,11 +210,19 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
       probesEPIC$genes <- UCSC_RefGene_Name_EPIC
       probesEPIC <- sort(probesEPIC)
     }
+
+    if (is.element(array_type, "EPICv2")) {
+      message("getting EPICv2 annotations")
+      #data("EPICv2_hg19_probes") # adding that!
+      probesEPICv2 <- sort(EPICv2_hg19_probes)
+    }
+
     if (array_type == "overlap") {
       probes <- sort(subsetByOverlaps(probes450k, probesEPIC))
     } else {
-      probes <- unique(sort(c(probes450k, probesEPIC)))
+      probes <- unique(sort(c(probes450k, probesEPIC, probesEPICv2)))
     }
+
 
     # CpG probes only
     ao_probes <- probes[substr(names(probes), 1, 2) == "cg" & is.element(as.vector(seqnames(probes)), object@genome$chr)]
@@ -285,12 +295,16 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
     message("getting the gene annotations for each bin")
 
     o <- findOverlaps(object@probes, object@bins)
-    bin_genes <- sapply(lapply(lapply(split(object@probes$genes[queryHits(o)],
-                                            names(object@bins)[subjectHits(o)]), unique), sort), paste0, collapse=";")
+    bin_genes <- sapply(lapply(sapply(split(object@probes$genes[queryHits(o)], names(object@bins)[subjectHits(o)]),
+                               function(x) na.omit(unlist(strsplit(x,split = ";")))), unique), paste, collapse = ";")
+
+
 
     object@bins$genes <- bin_genes
+
     return(object)
 }}
+
 
 #' CNV.create_bins
 #' @description Split genome into bins of defined size.
@@ -321,7 +335,7 @@ CNV.create_bins <- function(hg19.anno, bin_minsize = 50000, hg19.gap, hg19.exclu
 #' @param bin_maxsize foo
 #' @param verbose foo
 #' @return \code{GRanges} object.
-CNV.merge_bins <- function(hg19.anno, hg19.tile, bin_minprobes = 20, hg19.probes,
+CNV.merge_bins <- function(hg19.anno, hg19.tile, bin_minprobes = 15, hg19.probes,
     bin_maxsize = 5e+06, verbose = FALSE) {
     values(hg19.tile)$probes <- countOverlaps(hg19.tile, hg19.probes)
     hg19.tile.df <- as.data.frame(hg19.tile)[, c("seqnames", "start", "end",
