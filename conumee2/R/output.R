@@ -1355,7 +1355,7 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
   bin.ratio <- x@bin$ratio[[sample_n]] - x@bin$shift[sample_n]
   bin.ratio[bin.ratio < ylim[1]] <- ylim[1]
   bin.ratio[bin.ratio > ylim[2]] <- ylim[2]
-  cols2 = c("red","red", "lightgrey", "green", "green")
+  cols2 = c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")
 
 
 
@@ -1373,7 +1373,7 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
 
   tickl <- .cumsum0(x@anno@genome[chr, "size"]) + x@anno@genome[chr,"size"]/2
 
-  cols = c("red","red", "lightgrey", "green", "green")
+  cols = c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")
   bin.ratio.cols <- apply(colorRamp(cols)((bin.ratio + max(abs(ylim)))/(2 *max(abs(ylim)))),
                           1, function(x) rgb(x[1], x[2], x[3], maxColorValue = 255))
 
