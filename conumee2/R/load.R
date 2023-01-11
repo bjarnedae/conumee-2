@@ -203,48 +203,60 @@ read.450k.url <- function(url = NULL, idat = NULL) {
 
 #' CNV.import
 #' @description Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting \code{data.frame} for \code{CNV.load}.
+#' @param array_type character. Choose either \code{"EPICv2"} or \code{"mouse"} as array_type. Default to \code{"EPICv2"}.
 #' @param directory Specify the folder that stores the .idat-Files.
 #' @param sample_sheet dataframe. Provide a sample sheet with at least three columns: \code{Sample_Name}, \code{Sentrix_ID} and \code{Sentrix_Position}. The spelling of the colnames must be exactly as shown.
 #' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
 #' @return \code{dataframe} object.
-#' @details This method loads the unmethylated and methylated signal intensities for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
+#' @details This method loads the unmethylated and methylated signal intensities for each probe by using the illuminaio package and calculates the combined signal intensities. It is designed to be used for the Illumina EPICv2 arrays and the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
 #' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
-setGeneric("CNV.import", function(directory, sample_sheet, ...) {
+setGeneric("CNV.import", function(array_type, directory, sample_sheet, ...) {
   standardGeneric("CNV.import")
 })
 
 #' @rdname CNV.import
-setMethod("CNV.import", signature(directory = "character", sample_sheet = "data.frame"),
-          function(directory = getwd(), sample_sheet = NULL) {
+setMethod("CNV.import", signature(array_type = "character", directory = "character", sample_sheet = "data.frame"),
+          function(array_type = "EPICv2", directory = getwd(), sample_sheet = NULL) {
            if(is.null(sample_sheet)){
              stop("please provide a sample sheet")
            }
 
             object <- new("data.frame")
-            data("CNV.import_mouse_data")
+
+            if(array_type == "mouse"){
+              data("CNV.import_mouse_data")
+              anno <- CNV.import_mouse_data
+            }
+
+            if(array_type == "EPICv2"){
+              data("CNV.import_EPICv2")
+              anno <- CNV.import_EPICv2
+            }
+
+            if(!array_type %in% c("mouse", "EPICv2")){
+              stop("Please choose EPICv2 or mouse as array_type.")
+            }
 
             lf <- list.files(directory, pattern=".idat$", full.names = TRUE)
-
 
             object <- suppressWarnings(do.call(cbind, lapply(sample_sheet$Sample_Name, function(i) {
               message(i)
               f <- lf[grepl(paste0(sample_sheet[match(i, sample_sheet$Sample_Name), "Sentrix_ID"], "_", sample_sheet[match(i, sample_sheet$Sample_Name), "Sentrix_Position"], "_Grn"), lf)]
               g <- readIDAT(f)[["Quants"]]
               r <- readIDAT(sub("_Grn", "_Red", f))[["Quants"]]
-              t1g <- g[CNV.import_mouse_data[["type1g"]]$AddressA_ID, "Mean", drop = FALSE] + g[CNV.import_mouse_data[["type1g"]]$AddressB_ID, "Mean"]
-              t1r <- r[CNV.import_mouse_data[["type1r"]]$AddressA_ID, "Mean", drop = FALSE] + r[CNV.import_mouse_data[["type1r"]]$AddressB_ID, "Mean"]
-              t2 <- g[CNV.import_mouse_data[["type2"]]$AddressA_ID, "Mean", drop = FALSE] + r[CNV.import_mouse_data[["type2"]]$AddressA_ID, "Mean"]
-              names(t1g) <- CNV.import_mouse_data[["type1g"]]$Name
-              names(t1r) <- CNV.import_mouse_data[["type1r"]]$Name
-              names(t2) <- CNV.import_mouse_data[["type2"]]$Name
+              t1g <- g[anno[["type1g"]]$AddressA_ID, "Mean", drop = FALSE] + g[anno[["type1g"]]$AddressB_ID, "Mean"]
+              t1r <- r[anno[["type1r"]]$AddressA_ID, "Mean", drop = FALSE] + r[anno[["type1r"]]$AddressB_ID, "Mean"]
+              t2 <- g[anno[["type2"]]$AddressA_ID, "Mean", drop = FALSE] + r[anno[["type2"]]$AddressA_ID, "Mean"]
+              names(t1g) <- anno[["type1g"]]$Name
+              names(t1r) <- anno[["type1r"]]$Name
+              names(t2) <- anno[["type2"]]$Name
               c(t1g, t1r, t2)
             })))
             colnames(object) <- sample_sheet$Sample_Name
             object <- as.data.frame(object)
             return(object)
-
-          })
+            })
 
 #' CNV.define_detail
 #' @description Create a \code{GRanges} object for detail regions. Downstream plotting functions will create individual plots for each detail region.
