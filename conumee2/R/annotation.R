@@ -28,7 +28,7 @@ NULL
 #' @author Volker Hovestadt \email{conumee@@hovestadt.bio}, Bjarne Daenekas
 #' @export
 CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize = 5e+06,
-    array_type = "450k", exclude_regions = NULL, detail_regions = NULL) {
+    array_type = "450k", exclude_regions = NULL, detail_regions = NULL, chrXY = FALSE) {
     object <- new("CNV.anno")
     object@date <- date()
 
@@ -48,16 +48,21 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
   #mouse beginning
     if( array_type == "mouse") {
 
-      data("mouse_annotation")
+      #data("mouse_annotation") add that!
 
-      object@genome <- data.frame(chr = paste("chr", c(1:19), sep = ""),
-                                  stringsAsFactors = FALSE)
+      if (chrXY) {
+        object@genome <- data.frame(chr = paste("chr", c(1:19, "X", "Y"),
+                                                sep = ""), stringsAsFactors = FALSE)
+      } else {
+        object@genome <- data.frame(chr = paste("chr", 1:19, sep = ""),
+                                    stringsAsFactors = FALSE)
+      }
 
       rownames(object@genome) <- object@genome$chr
 
       message("using mm10 genome annotations from UCSC")
 
-      object@genome$size <- mouse_annotation[[1]]$size[-c(20,21)]
+      object@genome$size <- mouse_annotation[[1]]$size[1:nrow(object@genome)]
 
       tbl.gap <- mouse_annotation[[2]][is.element(mouse_annotation[[2]]$chrom, object@genome$chr),]
 
@@ -65,29 +70,30 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
                          tbl.gap$chromEnd), seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
 
 
-      mouse_probes <- GRanges(as.vector(paste("chr",mouse_annotation[[3]]$chr, sep = "")),
-                              IRanges(start = mouse_annotation[[3]]$location,
-                                      end = mouse_annotation[[3]]$location))
+      mouse_probes <- GRanges(as.vector(paste("chr",mouse_annotation[[3]]$CHR, sep = "")),
+                              IRanges(start = mouse_annotation[[3]]$MAPINFO,
+                                      end = mouse_annotation[[3]]$MAPINFO), seqinfo = Seqinfo(object@genome$chr, object@genome$size, genome = "mm10"))
 
-      names(mouse_probes) <- mouse_annotation[[3]]$name
+      names(mouse_probes) <- mouse_annotation[[3]]$Name
+      mouse_probes$genes <- mouse_annotation[[3]]$genes
 
 
       # CpG probes only
-      mouse_probes <- mouse_probes[substr(names(mouse_probes),
-                                          1, 2) == "cg" & is.element(as.vector(seqnames(mouse_probes)), object@genome$chr)]
-      seqlevels(mouse_probes)<- sort(seqlevels(mouse_probes))[c(1,12,13,14,15,16,17,18,19,2,3,4,5,6,7,8,9,10,11)]
+      mouse_probes <- mouse_probes[substr(names(mouse_probes),1, 2) == "cg" & is.element(as.vector(seqnames(mouse_probes)), object@genome$chr)]
+      seqlevels(mouse_probes)<- c(paste("chr", 1:19, sep = ""), "chrY", "chrX")
       mouse_probes <- sort(mouse_probes)
 
+      object@probes <- mouse_probes
 
+        #sort(GRanges(as.vector(seqnames(mouse_probes)), ranges(mouse_probes),
+                                #seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
 
-      object@probes <- sort(GRanges(as.vector(seqnames(mouse_probes)), ranges(mouse_probes),
-                                seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
-      data("mouse_cpgs")
-      c_probes <- object@probes
-      c_probes$genes <- ""
-      c_probes[names(mouse_cpgs)]$genes <- mouse_cpgs$genes
-
-      object@probes <- c_probes
+      # data("mouse_cpgs")
+      # c_probes <- object@probes
+      # c_probes$genes <- ""
+      # c_probes[names(mouse_cpgs)]$genes <- mouse_cpgs$genes
+      #
+      # object@probes <- c_probes
 
       message(" - ", length(object@probes), " probes used")
 
@@ -147,28 +153,32 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
       message(" - ", length(anno.tile), " bins created")
 
       message("merging bins")
-      object@bins <- CNV.merge_bins_mice(hg19.anno = object@genome, hg19.tile = anno.tile,
+      object@bins <- CNV.merge_bins(hg19.anno = object@genome, hg19.tile = anno.tile,
                                     bin_minprobes = bin_minprobes, hg19.probes = object@probes, bin_maxsize = bin_maxsize)
       message(" - ", length(object@bins), " bins remaining")
 
       message("getting the gene annotations for each bin")
 
       o <- findOverlaps(object@probes, object@bins)
-      bin_genes <- sapply(lapply(lapply(split(object@probes$genes[queryHits(o)],
-                                 names(object@bins)[subjectHits(o)]), unique), sort), paste0, collapse=";")
+      bin_genes <- sapply(lapply(sapply(split(object@probes$genes[queryHits(o)], names(object@bins)[subjectHits(o)]),
+                                        function(x) na.omit(unlist(strsplit(x,split = ";")))), unique), paste, collapse = ";")
 
-      c_bins <- object@bins
-      c_bins$genes <- ""
-      c_bins[names(bin_genes)]$genes <- sub(";","", bin_genes)
-      object@bins <- c_bins
+
+      object@bins$genes <- bin_genes
 
       return(object)
-
       }
     #mouse end
 
     else {
-        object@genome <- data.frame(chr = paste("chr", 1:22, sep = ""), stringsAsFactors = FALSE)
+
+      if (chrXY) {
+        object@genome <- data.frame(chr = paste("chr", c(1:22, "X", "Y"),
+                                                sep = ""), stringsAsFactors = FALSE)
+      } else {
+        object@genome <- data.frame(chr = paste("chr", 1:22, sep = ""),
+                                    stringsAsFactors = FALSE)
+      }
 
     rownames(object@genome) <- object@genome$chr
 
