@@ -560,7 +560,7 @@ setGeneric("CNV.detailplot", function(object, ...) {
 #' @rdname CNV.detailplot
 setMethod("CNV.detailplot", signature(object = "CNV.analysis"),
           function(object, name, yaxt = "l", ylim = c(-1.25, 1.25), set_par = TRUE, output = NULL, columns = NULL, main = NULL,
-                   directory = getwd(), width = 12, height = 8, res = 720, cols = c("red","red", "lightgrey", "green", "green")) {
+                   directory = getwd(), width = 12, height = 8, res = 720, cols = c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")) {
 
   if (!is.element(name, values(object@anno@detail)$name))
     stop("detail_name not in list of detail regions.")
@@ -1032,8 +1032,9 @@ setMethod("CNV.summaryplot", signature(object = "CNV.analysis"), function(object
   chr = object@anno@genome$chr
   chr.cumsum0 <- .cumsum0(object@anno@genome[chr, "size"], n = chr)
 
-  polygon(as.numeric(chr.cumsum0[match(segments_pl$seqnames, names(chr.cumsum0))]) + segments_pl$xpos, segments_pl$gains, col="forestgreen",lwd=1.5)
-  polygon(as.numeric(chr.cumsum0[match(segments_pl$seqnames, names(chr.cumsum0))]) + segments_pl$xpos, -segments_pl$loss, col="firebrick2",lwd=1.5)
+  polygon(as.numeric(chr.cumsum0[match(segments_pl$seqnames, names(chr.cumsum0))]) + segments_pl$xpos, segments_pl$gains, col="#F16729",lwd=1.5)
+  polygon(as.numeric(chr.cumsum0[match(segments_pl$seqnames, names(chr.cumsum0))]) + segments_pl$xpos, -segments_pl$loss, col="darkblue",lwd=1.5)
+
 
   if (set_par)
     par(mfrow = mfrow_original, mar = mar_original, oma = oma_original)
