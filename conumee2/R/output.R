@@ -10,26 +10,15 @@
     xx
 }
 
+#functions from the BoutrosLab.plotting.general package
+
 critical.value.ks.test <- function(n, conf, alternative = "two.sided") {
 
   if(alternative == "one-sided") conf <- 1- (1-conf)*2;
 
-  # for the small sample size
-
-  if (n < 50) {
-    # use the exact distribution from the C code in R
-    exact.kolmogorov.pdf <- function(x) {
-      p <- .Call("pKolmogorov2x", p = as.double(x), as.integer(n), PACKAGE = "BoutrosLab.plotting.general");
-      return(p - conf);
-    }
-
-    critical.value <- uniroot(exact.kolmogorov.pdf, lower = 0, upper = 1)$root;
-  }
-
   # if the sample size is large(>50), under the null hypothesis, the absolute value of the difference
   # of the empirical cdf and the theoretical cdf should follow a kolmogorov distribution
 
-  if (n >= 50) {
     # pdf of the kolmogorov distribution minus the confidence level
     kolmogorov.pdf <- function(x) {
       i <- 1:10^4;
@@ -39,7 +28,7 @@ critical.value.ks.test <- function(n, conf, alternative = "two.sided") {
     # the root of the function above
     # is the critical value for a specific confidence level multiplied by sqrt(n);
     critical.value <- uniroot(kolmogorov.pdf , lower = 10^(-6), upper = 3)$root / sqrt(n);
-  }
+
 
   return(critical.value);
 }
