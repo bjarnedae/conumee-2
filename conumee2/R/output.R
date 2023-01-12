@@ -1359,9 +1359,9 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
 #' @import ggplot2
 #' @import plotly
 
-CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
+CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
 
-  if (!any(colnames(x@fit$coef) == sample_name)){
+  if (!any(colnames(x@fit$coef) == sample)){
     stop(message("Please provide the correct sample name."))
   }
 
@@ -1369,7 +1369,7 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
   #   stop("CNV.plotly is not compatible with mouse arrays.")
   # }
 
-  sample_n <- which(colnames(x@fit$coef) == sample_name)
+  sample_n <- which(colnames(x@fit$coef) == sample)
 
   ylim = c(-1.25, 1.25)
   bin.ratio <- x@bin$ratio[[sample_n]] - x@bin$shift[sample_n]
