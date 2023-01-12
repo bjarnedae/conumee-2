@@ -48,7 +48,7 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
   #mouse beginning
     if( array_type == "mouse") {
 
-      #data("mouse_annotation") add that!
+      data("mouse_annotation")
 
       if (chrXY) {
         object@genome <- data.frame(chr = paste("chr", c(1:19, "X", "Y"),
