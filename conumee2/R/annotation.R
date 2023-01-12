@@ -85,16 +85,6 @@ CNV.create_anno <- function(bin_minprobes = 15, bin_minsize = 50000, bin_maxsize
 
       object@probes <- mouse_probes
 
-        #sort(GRanges(as.vector(seqnames(mouse_probes)), ranges(mouse_probes),
-                                #seqinfo = Seqinfo(object@genome$chr, object@genome$size)))
-
-      # data("mouse_cpgs")
-      # c_probes <- object@probes
-      # c_probes$genes <- ""
-      # c_probes[names(mouse_cpgs)]$genes <- mouse_cpgs$genes
-      #
-      # object@probes <- c_probes
-
       message(" - ", length(object@probes), " probes used")
 
       if (!is.null(exclude_regions)) {

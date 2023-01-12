@@ -19,6 +19,9 @@
 #' @param chr character vector. Which chromosomes to plot. Defaults to \code{'all'}.
 #' @param centromere logical. Show dashed lines at centromeres? Defaults to \code{TRUE}.
 #' @param detail logical. If available, include labels of detail regions? Defaults to \code{TRUE}.
+#' @bins_cex character. The size of the individual bin dots is reversely proportional its variance of included probes' log2-ratios. Choose either \code{standardized} for fixed dot sizes (to make plots from different samples comparable) or \code{sample_level} (to scale the dot sizes for each sample individually). Default to \code{standardized}.
+#' @sig_cgenes logical. Should the significant genes be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.
+#' @nsig_cgenes numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{5}.
 #' @param main character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length as the number of samples.
 #' @param ylim numeric vector. The y limits of the plot. Defaults to \code{c(-1.25, 1.25)}.
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
@@ -186,6 +189,10 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
 
        # significant cancer genes
 
+     if(ncol(object@anno@genome) == 2){ #disabling for the mouse arrays
+       sig_cgenes = FALSE
+     }
+
        if(sig_cgenes){
 
        data("consensus_cancer_genes_hg19")
@@ -326,6 +333,10 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
     }
 
       # significant cancer genes
+
+    if(ncol(object@anno@genome) == 2){ #disabling for the mouse arrays
+      sig_cgenes = FALSE
+    }
 
       if(sig_cgenes){
 
@@ -468,6 +479,10 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
       }
 
       # significant cancer genes
+
+      if(ncol(object@anno@genome) == 2){ #disabling for the mouse arrays
+        sig_cgenes = FALSE
+      }
 
       if(sig_cgenes){
 
@@ -1110,7 +1125,7 @@ setMethod("CNV.heatmap", signature(object = "CNV.analysis"), function(object,
   ll <- rep(NA, nrow(annotation))
   ll[l] <- names(l)
 
-  my_palette <- colorRampPalette(c("red","red", "white", "green", "green"))(n = 1000)
+  my_palette <- colorRampPalette(c("darkblue","darkblue", "white", "#F16729", "#F16729"))(n = 1000)
 
   if(hclust){
 
@@ -1350,6 +1365,10 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
     stop(message("Please provide the correct sample name."))
   }
 
+  # if(ncol(x@anno@genome) == 2){
+  #   stop("CNV.plotly is not compatible with mouse arrays.")
+  # }
+
   sample_n <- which(colnames(x@fit$coef) == sample_name)
 
   ylim = c(-1.25, 1.25)
@@ -1368,7 +1387,7 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
   chrs <- .cumsum0(x@anno@genome[chr, "size"], right = TRUE)
   chr.cumsum0 <- .cumsum0(x@anno@genome[chr, "size"], n = chr)
 
-  if (colnames(x@anno@genome)[3] == "pq"){
+  if (ncol(x@anno@genome) == 3){
   chrspq <- .cumsum0(x@anno@genome[chr, "size"]) + x@anno@genome[chr,"pq"]
   }
 
@@ -1396,6 +1415,7 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
 
   df3 <- data.frame(detail.ratio,detail.x,names=values(x@anno@detail)$name)
 
+  if (ncol(x@anno@genome) == 3){
   p <- ggplot(df,aes(x=y, y=bin.ratio)) +
     geom_point(colour=bin.ratio.cols,size=.5) + geom_vline(xintercept = chrs,color="black",size=0.1) +
     theme_bw()+
@@ -1406,17 +1426,15 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
     xlab("")+
     ylab("")+
     geom_point(aes(x=detail.x,y=detail.ratio),size=1.15,alpha=0.9,data=df3,color="red") +
-
-
     scale_x_continuous(breaks=tickl,labels = c(chr))+#,expand = c(0, 0),limits = c(0, max(x)))+
     theme(axis.text.x= element_text(size=10,angle = 90))
+
   suppressWarnings(ggp <- plotly::ggplotly(p))
   suppressWarnings(ggpb <- plotly::plotly_build(ggp))
 
   ggpb$x$data[[1]]$text <- paste0(seqnames(x@anno@bins),"<br>","start: ",
                                   start(x@anno@bins),"<br>","end: ",end(x@anno@bins),"<br>",
                                   "probes: ",values(x@anno@bins)$probes, "<br>", "genes: ", x@anno@bins$genes)
-
   ggpb$x$data[[2]]$text <- ""
   ggpb$x$data[[3]]$text <- ""
   ggpb$x$data[[4]]$text <- paste0(x@seg$summary[[sample_n]]$chrom,"<br>","start: ",
@@ -1424,7 +1442,35 @@ CNV.plotly <- function(x, sample_name = colnames(x@fit$coef)[1]){
                                   "median: ",x@seg$summary[[sample_n]]$seg.median)
   ggpb$x$data[[5]]$text <- values(x@anno@detail)$name
   suppressWarnings(ggpb%>%toWebGL())
-}
+  }
+
+  if (ncol(x@anno@genome) == 2){
+    p <- ggplot(df,aes(x=y, y=bin.ratio)) +
+      geom_point(colour=bin.ratio.cols,size=.5) + geom_vline(xintercept = chrs,color="black",size=0.1) +
+      theme_bw()+
+      ggtitle(names(x@fit$coef[sample_n]))+
+      theme(text = element_text(family = "Arial"))+
+      ylim(-1.25, 1.25)+
+      geom_segment(aes(x = xs, y = ys, xend = xe, yend = ye),size=.5, data = df2,color="darkblue")+
+      xlab("")+
+      ylab("")+
+      geom_point(aes(x=detail.x,y=detail.ratio),size=1.15,alpha=0.9,data=df3,color="red") +
+      scale_x_continuous(breaks=tickl,labels = c(chr))+#,expand = c(0, 0),limits = c(0, max(x)))+
+      theme(axis.text.x= element_text(size=10,angle = 90))
+
+
+  suppressWarnings(ggp <- plotly::ggplotly(p))
+  suppressWarnings(ggpb <- plotly::plotly_build(ggp))
+
+  ggpb$x$data[[1]]$text <- paste0(seqnames(x@anno@bins),"<br>","start: ",
+                                  start(x@anno@bins),"<br>","end: ",end(x@anno@bins),"<br>",
+                                  "probes: ",values(x@anno@bins)$probes, "<br>", "genes: ", x@anno@bins$genes)
+  ggpb$x$data[[2]]$text <- paste0(x@seg$summary[[sample_n]]$chrom,"<br>","start: ",
+                                  x@seg$summary[[sample_n]]$loc.start,"<br>","end: ",x@seg$summary[[sample_n]]$loc.end,"<br>",
+                                  "median: ",x@seg$summary[[sample_n]]$seg.median)
+  ggpb$x$data[[4]]$text <- values(x@anno@detail)$name
+  suppressWarnings(ggpb%>%toWebGL())
+}}
 
 
 
@@ -1455,9 +1501,15 @@ setGeneric("CNV.qqplot", function(object, ...) {
 setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sample = as.character(), gene = as.character(), conf = 0.99, minoverlap = 1L, set_par = TRUE,
                                                                      ...) {
 
+  if(ncol(x@anno@genome) == 2){
+    stop("CNV.plotly is not compatible with mouse arrays.")
+  }
+
   if (length(gene)== 0) {
     stop("Please provide a valid gene symbol. Check data(`consensus_cancer_genes_hg19`) for details.")
   }
+
+
 
   if (set_par) {
     mfrow_original <- par()$mfrow
