@@ -4,7 +4,7 @@
 \alias{CNV.plotly}
 \title{CNV.plotly}
 \usage{
-CNV.plotly(x, sample_name = colnames(x@fit$coef)[1])
+CNV.plotly(x, sample = colnames(x@fit$coef)[1])
 }
 \arguments{
 \item{x}{A \code{CNVanalysis} object after \code{CNV.segment} is performed.}

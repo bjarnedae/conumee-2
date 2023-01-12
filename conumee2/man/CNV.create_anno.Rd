@@ -10,7 +10,8 @@ CNV.create_anno(
   bin_maxsize = 5e+06,
   array_type = "450k",
   exclude_regions = NULL,
-  detail_regions = NULL
+  detail_regions = NULL,
+  chrXY = FALSE
 )
 }
 \arguments{

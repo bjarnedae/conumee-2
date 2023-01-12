@@ -7,7 +7,7 @@
 \usage{
 CNV.focal(object, ...)
 
-\S4method{CNV.focal}{CNV.analysis}(object, conf = 0.99, minoverlap = 1L, ...)
+\S4method{CNV.focal}{CNV.analysis}(object, conf = 0.99, minoverlap = 1000L, ...)
 }
 \arguments{
 \item{object}{\code{CNV.analysis} object.}
@@ -16,7 +16,7 @@ CNV.focal(object, ...)
 
 \item{conf}{numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.}
 
-\item{minoverlap}{integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1L}.}
+\item{minoverlap}{integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1000L}.}
 }
 \value{
 A \code{CNV.analysis} object with significantly altered bins and genes from the Cancer Gene Census (curated by the Sanger Institute).

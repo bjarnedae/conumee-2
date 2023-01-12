@@ -235,8 +235,7 @@ setMethod("CNV.detail", signature(object = "CNV.analysis"), function(object) {
 })
 
 
-#' @import BoutrosLab.plotting.general
-NULL
+
 
 #' CNV.focal
 #' @description This optional function provides filtering for diagnostically relevant CNVs (high level amplification or homozygous deletion).

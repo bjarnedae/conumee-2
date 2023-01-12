@@ -2,14 +2,16 @@
 % Please edit documentation in R/load.R
 \name{CNV.import}
 \alias{CNV.import}
-\alias{CNV.import,character,data.frame-method}
+\alias{CNV.import,character,character,data.frame-method}
 \title{CNV.import}
 \usage{
-CNV.import(directory, sample_sheet, ...)
+CNV.import(array_type, directory, sample_sheet, ...)
 
-\S4method{CNV.import}{character,data.frame}(directory = getwd(), sample_sheet = NULL)
+\S4method{CNV.import}{character,character,data.frame}(array_type = "EPICv2", directory = getwd(), sample_sheet = NULL)
 }
 \arguments{
+\item{array_type}{character. Choose either \code{"EPICv2"} or \code{"mouse"} as array_type. Default to \code{"EPICv2"}.}
+
 \item{directory}{Specify the folder that stores the .idat-Files.}
 
 \item{sample_sheet}{dataframe. Provide a sample sheet with at least three columns: \code{Sample_Name}, \code{Sentrix_ID} and \code{Sentrix_Position}. The spelling of the colnames must be exactly as shown.}
@@ -23,7 +25,7 @@ CNV.import(directory, sample_sheet, ...)
 Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting \code{data.frame} for \code{CNV.load}.
 }
 \details{
-This method loads the unmethylated and methylated signal intensities for each probe and sums them up. It is designed to be used for the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
+This method loads the unmethylated and methylated signal intensities for each probe by using the illuminaio package and calculates the combined signal intensities. It is designed to be used for the Illumina EPICv2 arrays and the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
 }
 \author{
 Bjarne Daenekas \email{conumee@hovestadt.bio}

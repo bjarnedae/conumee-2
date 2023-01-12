@@ -7,7 +7,7 @@
 CNV.merge_bins(
   hg19.anno,
   hg19.tile,
-  bin_minprobes = 20,
+  bin_minprobes = 15,
   hg19.probes,
   bin_maxsize = 5e+06,
   verbose = FALSE

@@ -20,7 +20,7 @@ CNV.detailplot(object, ...)
   width = 12,
   height = 8,
   res = 720,
-  cols = c("red", "red", "lightgrey", "green", "green")
+  cols = c("darkblue", "darkblue", "lightgrey", "#F16729", "#F16729")
 )
 }
 \arguments{

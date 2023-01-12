@@ -15,14 +15,17 @@ CNV.genomeplot(object, ...)
   centromere = TRUE,
   detail = TRUE,
   main = NULL,
+  sig_cgenes = TRUE,
+  nsig_cgenes = 5,
   output = NULL,
   directory = getwd(),
   ylim = c(-1.25, 1.25),
+  bins_cex = "standardized",
   set_par = TRUE,
   width = 12,
-  height = 8,
+  height = 6,
   res = 720,
-  cols = c("red", "red", "lightgrey", "green", "green")
+  cols = c("darkblue", "darkblue", "lightgrey", "#F16729", "#F16729")
 )
 }
 \arguments{
@@ -38,11 +41,17 @@ CNV.genomeplot(object, ...)
 
 \item{main}{character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length as the number of samples.}
 
+\item{sig_cgenes}{logical. Should the significant genes be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.}
+
+\item{nsig_cgenes}{numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{5}.}
+
 \item{output}{character. Choose between \code{pdf} and \code{png}. Defaults to \code{NULL}}
 
 \item{directory}{character. Export directory for saving the files}
 
 \item{ylim}{numeric vector. The y limits of the plot. Defaults to \code{c(-1.25, 1.25)}.}
+
+\item{bins_cex}{character. The size of the individual bin dots is reversely proportional its variance of included probes' log2-ratios. Choose either \code{standardized} for fixed dot sizes (to make plots from different samples comparable) or \code{sample_level} (to scale the dot sizes for each sample individually). Default to \code{standardized}.}
 
 \item{set_par}{logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.}
 

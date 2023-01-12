@@ -10,6 +10,147 @@
     xx
 }
 
+critical.value.ks.test <- function(n, conf, alternative = "two.sided") {
+
+  if(alternative == "one-sided") conf <- 1- (1-conf)*2;
+
+  # for the small sample size
+
+  if (n < 50) {
+    # use the exact distribution from the C code in R
+    exact.kolmogorov.pdf <- function(x) {
+      p <- .Call("pKolmogorov2x", p = as.double(x), as.integer(n), PACKAGE = "BoutrosLab.plotting.general");
+      return(p - conf);
+    }
+
+    critical.value <- uniroot(exact.kolmogorov.pdf, lower = 0, upper = 1)$root;
+  }
+
+  # if the sample size is large(>50), under the null hypothesis, the absolute value of the difference
+  # of the empirical cdf and the theoretical cdf should follow a kolmogorov distribution
+
+  if (n >= 50) {
+    # pdf of the kolmogorov distribution minus the confidence level
+    kolmogorov.pdf <- function(x) {
+      i <- 1:10^4;
+      sqrt(2*pi) / x * sum(exp(-(2*i - 1)^2*pi^2/(8*x^2))) - conf;
+    }
+
+    # the root of the function above
+    # is the critical value for a specific confidence level multiplied by sqrt(n);
+    critical.value <- uniroot(kolmogorov.pdf , lower = 10^(-6), upper = 3)$root / sqrt(n);
+  }
+
+  return(critical.value);
+}
+
+
+create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf = 0.95, conf.method = "both", reference.line.method = "quartiles") {
+
+  # remove the NA and sort the sample
+  # the QQ plot is the plot of the sorted sample against the corresponding quantile from the theoretical distribution
+  sorted.sample <- sort(x[!is.na(x)]);
+
+  # the corresponding probabilities, should be (i - 0.5)/n, where i = 1,2,3,...,n
+  probabilities <- ppoints(length(sorted.sample));
+
+  # the corresponding quantile under the theoretical distribution
+  theoretical.quantile <- distribution(probabilities);
+
+  if(reference.line.method == "quartiles") {
+    # get the numbers of the 1/4 and 3/4 quantile in order to draw a reference line
+    quantile.x.axis <- quantile(sorted.sample, c(0.25, 0.75));
+    quantile.y.axis <- distribution(c(0.25, 0.75));
+
+    # the intercept and slope of the reference line
+    b <- (quantile.x.axis[2] - quantile.x.axis[1]) / (quantile.y.axis[2] - quantile.y.axis[1]);
+    a <- quantile.x.axis[1] - b * quantile.y.axis[1];
+  }
+  if(reference.line.method == "diagonal") {
+    a <- 0;
+    b <- 1;
+  }
+  if(reference.line.method == "robust") {
+    coef.linear.model <- coef(lm(sorted.sample ~ theoretical.quantile));
+    a <- coef.linear.model[1];
+    b <- coef.linear.model[2];
+  }
+
+
+  # the reference line
+  fit.value <- a + b * theoretical.quantile;
+
+  # create some vectors to store the returned values
+  upper.pw <- NULL;
+  lower.pw <- NULL;
+  upper.sim <- NULL;
+  lower.sim <- NULL;
+  u <- NULL;	# a vector of logical value of whether the probabilities are in the interval [0,1] for the upper band
+  l <- NULL;	# a vector of logical value of whether the probabilities are in the interval [0,1] for the lower band
+
+  ### pointwise method
+  if (conf.method == "both" | conf.method == "pointwise") {
+
+    # create the numeric derivative of the theoretical quantile distribution
+    numeric.derivative <- function(p) {
+      # set the change in independent variable
+      h <- 10^(-6);
+      if (h * length(sorted.sample) > 1) { h <- 1 / (length(sorted.sample) + 1); }
+      # the function
+      return((distribution(p + h/2) - distribution(p - h/2)) / h);
+    }
+
+    # the standard errors of pointwise method
+    data.standard.error <- b * numeric.derivative(probabilities) * qnorm(1 - (1 - conf)/2) * sqrt(probabilities * (1 - probabilities) / length(sorted.sample));
+
+    # confidence interval of pointwise method
+    upper.pw <- fit.value + data.standard.error;
+    lower.pw <- fit.value - data.standard.error;
+  }
+
+  ### simultaneous method
+  if (conf.method == "both" | conf.method == "simultaneous") {
+
+    # get the threshold value for the statistics---the absolute difference of the empirical cdf and the theoretical cdf
+    # Note that this statistics should follow a kolmogorov distribution when the sample size is large
+
+    # the critical value from the Kolmogorov-Smirnov Test
+    critical.value <- critical.value.ks.test(length(sorted.sample), conf);
+
+    # under the null hypothesis, get the CI for the probabilities
+    # the probabilities of the fitted value under the empirical cdf
+    expected.prob <- ecdf(sorted.sample)(fit.value);
+
+    # the probability should be in the interval [0, 1]
+    u <- (expected.prob + critical.value) >= 0 & (expected.prob + critical.value) <= 1;
+    l <- (expected.prob - critical.value) >= 0 & (expected.prob - critical.value) <= 1;
+
+    # get the corresponding quantiles from the theoretical distribution
+    z.upper <- distribution((expected.prob + critical.value)[u]);
+    z.lower <- distribution((expected.prob - critical.value)[l]);
+
+    # confidence interval of simultaneous method
+    upper.sim <- a + b * z.upper;
+    lower.sim <- a + b * z.lower;
+  }
+
+
+  # return the values for constructing the Confidence Bands of one sample QQ plot
+  # the list to store the returned values
+  returned.values <- list(
+    a = a,
+    b = b,
+    z = theoretical.quantile,
+    upper.pw = upper.pw,
+    lower.pw = lower.pw,
+    u = u,
+    l = l,
+    upper.sim = upper.sim,
+    lower.sim = lower.sim
+  );
+  return (returned.values);
+}
+
 
 #'
 #'
@@ -19,9 +160,9 @@
 #' @param chr character vector. Which chromosomes to plot. Defaults to \code{'all'}.
 #' @param centromere logical. Show dashed lines at centromeres? Defaults to \code{TRUE}.
 #' @param detail logical. If available, include labels of detail regions? Defaults to \code{TRUE}.
-#' @bins_cex character. The size of the individual bin dots is reversely proportional its variance of included probes' log2-ratios. Choose either \code{standardized} for fixed dot sizes (to make plots from different samples comparable) or \code{sample_level} (to scale the dot sizes for each sample individually). Default to \code{standardized}.
-#' @sig_cgenes logical. Should the significant genes be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.
-#' @nsig_cgenes numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{5}.
+#' @param bins_cex character. The size of the individual bin dots is reversely proportional its variance of included probes' log2-ratios. Choose either \code{standardized} for fixed dot sizes (to make plots from different samples comparable) or \code{sample_level} (to scale the dot sizes for each sample individually). Default to \code{standardized}.
+#' @param sig_cgenes logical. Should the significant genes be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.
+#' @param nsig_cgenes numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{5}.
 #' @param main character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length as the number of samples.
 #' @param ylim numeric vector. The y limits of the plot. Defaults to \code{c(-1.25, 1.25)}.
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
@@ -1491,7 +1632,6 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
 #' CNV.qqplot(x, gene = "EGFR", conf = 0.99, minoverlap = 10000L)
 #'
 #' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
-#' @import BoutrosLab.plotting.general
 #' @export
 setGeneric("CNV.qqplot", function(object, ...) {
   standardGeneric("CNV.qqplot")
@@ -1544,7 +1684,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
     ind.1 <- queryHits(h.1)
     names.1 <- names(object@anno@bins[ind.1])
 
-    c.intervals <- BoutrosLab.plotting.general::create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
+    c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
     qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = 0.8, plot.it = FALSE)
     y.c <- qq.plot$y
 
@@ -1573,7 +1713,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
     ind.2 <- queryHits(h.2)
     names.2 <- names(object@anno@bins[ind.2])
 
-    c.intervals <- BoutrosLab.plotting.general::create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
+    c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
     qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
     y.c <- qq.plot$y
 

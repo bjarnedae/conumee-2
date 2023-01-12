@@ -26,10 +26,6 @@ CNV.fit(query, ref, anno, ...)
 \item{...}{Additional parameters (\code{CNV.fit} generic, currently not used).}
 
 \item{intercept}{logical. Should intercept be considered? Defaults to \code{TRUE}.}
-
-\item{reduce_noise}{logical. Should the noise be reduced by excluding the probes with the lowest combined signal intensities among the set of control probes? Defaults to \code{FALSE}. For details see the publication.}
-
-\item{perc_cpgs}{numeric. What percentage of CpGs should be excluded if \code{reduce_noise} it set to \code{TRUE}? Defaults to \code{0.2}.}
 }
 \value{
 \code{CNV.analysis} object.
