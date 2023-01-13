@@ -42,7 +42,7 @@ setGeneric("CNV.fit", function(query, ref, anno, ...) {
 
 #' @rdname CNV.fit
 setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV.anno"),
-          function(query, ref, anno, intercept = TRUE, reduce_noise = FALSE, perc_cpgs = 0.2) {
+          function(query, ref, anno, intercept = TRUE) {
             if (ncol(query@intensity) == 0)
               stop("query intensities unavailable, run CNV.load")
             if (ncol(ref@intensity) == 0)
@@ -106,7 +106,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
 #' @param object \code{CNV.analysis} object.
 #' @param ... Additional parameters (\code{CNV.bin} generic, currently not used).
 #' @return \code{CNV.analysis} object.
-#' @details The median intensity per bin is calculated. Bins are defined using \code{CNV.create_anno}. A value by which all probe and bin intensity values are shifted in subsequent analysis steps is calculated by minimizing the median absolute deviation from all bins to zero (ideally shifting the copy-neutral state to 0).
+#' @details The median intensity per bin and its variance are calculated. Bins are defined using \code{CNV.create_anno}. A value by which all probe and bin intensity values are shifted in subsequent analysis steps is calculated by minimizing the median absolute deviation from all bins to zero (ideally shifting the copy-neutral state to 0).
 #' @examples
 #' # prepare
 #' library(minfiData)
@@ -367,7 +367,7 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
 
 
 #' CNV.focal
-#' @description This optional function provides filtering for diagnostically relevant CNVs (high level amplification or homozygous deletion).
+#' @description This optional function provides filtering for diagnostically relevant CNVs (high level amplifications or homozygous deletions).
 #' @param object \code{CNV.analysis} object.
 #' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.
 #' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1000L}.
@@ -377,7 +377,7 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
 #' Secondly, these bins are overlapped with the Cancer Gene Census to identify diagnostically relevant genes. The resulting bins and genes are sorted in regards to their significance.
 #' @examples
 #'
-#' x <- CNV.focal(object, conf = 0.99, minoverlap = 10000L)
+#' x <- CNV.focal(x, conf = 0.99, minoverlap = 10000L)
 #' x@@detail$cancer_genes
 #' x@@detail$significant_bins
 #'
@@ -472,7 +472,7 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
 NULL
 
 #' CNV.segment
-#' @description Segment bin values (wrapper of \code{DNAcopy} package).
+#' @description Segment bin values (wrapper of \code{DNAcopy} package). Each bin is assigned to a weight that is inversely proprotional to its variance.
 #' @param object \code{CNV.analysis} object.
 #' @param alpha See details. Defaults to 0.001.
 #' @param nperm See details. Defaults to 50000.

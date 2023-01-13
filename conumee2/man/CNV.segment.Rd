@@ -39,7 +39,7 @@ CNV.segment(object, ...)
 \code{CNV.analysis} object.
 }
 \description{
-Segment bin values (wrapper of \code{DNAcopy} package).
+Segment bin values (wrapper of \code{DNAcopy} package). Each bin is assigned to a weight that is inversely proprotional to its variance.
 }
 \details{
 This method is a wrapper of the CNA, segment, segments.summary and segments.p methods of the DNAcopy package. Please refer to the respective man pages for more detailed information. The default parameters of \code{CNV.segment} override some of the default parameters of segment and are optimized for 450k data CNV analysis.

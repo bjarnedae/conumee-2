@@ -24,7 +24,7 @@ CNV.qqplot(object, ...)
 
 \item{sample}{character. If \code{CNV.analysis} object contains multiple samples, please specify the sample name. You can check the sample names with \code{colnames(object@fit$ratio)}. If the object contains just one sample, this parameter can be left blank.}
 
-\item{gene}{character. Please provide the gene symbol for the gene of interest. You can use this function for every gene that is part of the Cancer Gene Census (curated by the Sanger Institute).}
+\item{gene}{character. Please provide the gene symbol for the gene of interest. You can use this function for every gene that is part of the Cancer Gene Census (curated by the Sanger Institute) or part of the \code{detail_regions}.}
 
 \item{conf}{numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.}
 

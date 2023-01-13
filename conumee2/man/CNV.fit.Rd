@@ -7,14 +7,7 @@
 \usage{
 CNV.fit(query, ref, anno, ...)
 
-\S4method{CNV.fit}{CNV.data,CNV.data,CNV.anno}(
-  query,
-  ref,
-  anno,
-  intercept = TRUE,
-  reduce_noise = FALSE,
-  perc_cpgs = 0.2
-)
+\S4method{CNV.fit}{CNV.data,CNV.data,CNV.anno}(query, ref, anno, intercept = TRUE)
 }
 \arguments{
 \item{query}{\code{CNV.data} object of query sample (multiple samples).}

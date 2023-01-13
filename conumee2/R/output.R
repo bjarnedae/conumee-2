@@ -150,7 +150,7 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
 #' @param centromere logical. Show dashed lines at centromeres? Defaults to \code{TRUE}.
 #' @param detail logical. If available, include labels of detail regions? Defaults to \code{TRUE}.
 #' @param bins_cex character. The size of the individual bin dots is reversely proportional its variance of included probes' log2-ratios. Choose either \code{standardized} for fixed dot sizes (to make plots from different samples comparable) or \code{sample_level} (to scale the dot sizes for each sample individually). Default to \code{standardized}.
-#' @param sig_cgenes logical. Should the significant genes be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.
+#' @param sig_cgenes logical. Should the significant genes from the Cancer Gene Census be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.
 #' @param nsig_cgenes numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{5}.
 #' @param main character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length as the number of samples.
 #' @param ylim numeric vector. The y limits of the plot. Defaults to \code{c(-1.25, 1.25)}.
@@ -1074,7 +1074,7 @@ setMethod("CNV.detailplot_wrap", signature(object = "CNV.analysis"), function(ob
 #' CNV.genomeplot(x, chr = 'chr6')
 #' CNV.detailplot(x, name = 'PTEN')
 #' CNV.detailplot_wrap(x)
-#' CNV.summaryplot(x)
+#' CNV.summaryplot(x, threshold = 0.15)
 #' CNV.heatmap(x)
 #'
 #' # output text files
@@ -1484,7 +1484,7 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
 #' \code{CNV.plotly} plots an interactive copy number profile.
 #'
 #' @param x A \code{CNVanalysis} object after \code{CNV.segment} is performed.
-#' @param sample_name character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(object@@fit$ratio)}
+#' @param sample character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(object@@fit$ratio)}
 #' @export
 #' @import ggplot2
 #' @import plotly
@@ -1494,10 +1494,6 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
   if (!any(colnames(x@fit$coef) == sample)){
     stop(message("Please provide the correct sample name."))
   }
-
-  # if(ncol(x@anno@genome) == 2){
-  #   stop("CNV.plotly is not compatible with mouse arrays.")
-  # }
 
   sample_n <- which(colnames(x@fit$coef) == sample)
 

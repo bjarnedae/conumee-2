@@ -22,7 +22,7 @@ CNV.focal(object, ...)
 A \code{CNV.analysis} object with significantly altered bins and genes from the Cancer Gene Census (curated by the Sanger Institute).
 }
 \description{
-This optional function provides filtering for diagnostically relevant CNVs (high level amplification or homozygous deletion).
+This optional function provides filtering for diagnostically relevant CNVs (high level amplifications or homozygous deletions).
 }
 \details{
 This function should facilitate the detection of diagnostically relevant CNVs that affect single genes. Therefore, a qqplot illustrating the bins' log2-ratios is created for each chromosome arm. In the first step, bins that lie outside the confidence interval are identified and sorted based on their residuals to the confidence curves.
@@ -30,7 +30,7 @@ Secondly, these bins are overlapped with the Cancer Gene Census to identify diag
 }
 \examples{
 
-x <- CNV.focal(object, conf = 0.99, minoverlap = 10000L)
+x <- CNV.focal(x, conf = 0.99, minoverlap = 10000L)
 x@detail$cancer_genes
 x@detail$significant_bins
 

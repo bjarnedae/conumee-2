@@ -41,7 +41,7 @@ CNV.genomeplot(object, ...)
 
 \item{main}{character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length as the number of samples.}
 
-\item{sig_cgenes}{logical. Should the significant genes be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.}
+\item{sig_cgenes}{logical. Should the significant genes from the Cancer Gene Census be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.}
 
 \item{nsig_cgenes}{numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{5}.}
 

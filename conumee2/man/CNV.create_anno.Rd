@@ -21,11 +21,13 @@ CNV.create_anno(
 
 \item{bin_maxsize}{numeric. Maximum size of a bin. Merged bins that are larger are filtered out.}
 
-\item{array_type}{character. One of \code{450k}, \code{EPIC}, \code{mouse} or \code{overlap}. Defaults to \code{450k}.}
+\item{array_type}{character. One of \code{450k}, \code{EPIC}, \code{EPICv2}, \code{mouse} or \code{overlap}. Defaults to \code{450k}.}
 
 \item{exclude_regions}{GRanges object or path to bed file containing genomic regions to be excluded.}
 
 \item{detail_regions}{GRanges object or path to bed file containing genomic regions to be examined in detail.}
+
+\item{chrXY}{logical. Should chromosome X and Y be included in the analysis?}
 }
 \value{
 \code{CNV.anno} object.

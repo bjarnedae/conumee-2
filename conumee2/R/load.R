@@ -202,13 +202,13 @@ read.450k.url <- function(url = NULL, idat = NULL) {
 
 
 #' CNV.import
-#' @description Load combined signal intensities from .idat-Files generated with the Illumina Mouse array. In the next step, use the resulting \code{data.frame} for \code{CNV.load}.
+#' @description Load combined signal intensities from .idat-Files generated with the Illumina Mouse array or the EPICv2 array. Next, use the resulting \code{data.frame} for \code{CNV.load}.
 #' @param array_type character. Choose either \code{"EPICv2"} or \code{"mouse"} as array_type. Default to \code{"EPICv2"}.
 #' @param directory Specify the folder that stores the .idat-Files.
 #' @param sample_sheet dataframe. Provide a sample sheet with at least three columns: \code{Sample_Name}, \code{Sentrix_ID} and \code{Sentrix_Position}. The spelling of the colnames must be exactly as shown.
 #' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
 #' @return \code{dataframe} object.
-#' @details This method loads the unmethylated and methylated signal intensities for each probe by using the illuminaio package and calculates the combined signal intensities. It is designed to be used for the Illumina EPICv2 arrays and the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
+#' @details This method loads the unmethylated and methylated signal intensities for each probe by using the \code{illuminaio} package and calculates the combined signal intensities. It is designed to be used for the Illumina EPICv2 arrays and the Illumina Mouse arrays. Subsequently, the resulting \code{data.frame} should be used for \code{CNV.load}
 #' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
 setGeneric("CNV.import", function(array_type, directory, sample_sheet, ...) {
@@ -260,7 +260,7 @@ setMethod("CNV.import", signature(array_type = "character", directory = "charact
 
 #' CNV.define_detail
 #' @description Create a \code{GRanges} object for detail regions. Downstream plotting functions will create individual plots for each detail region.
-#' @param array_type character. One of \code{450k}, \code{EPIC} or \code{mouse}. Defaults to \code{450k}.
+#' @param array_type character. One of \code{450k}, \code{EPIC}, \code{EPICv2} or \code{mouse}. Defaults to \code{450k}.
 #' @param gene character vector. Specify the genes by using their \code{SYMBOL} (case sensitive). Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.
 #' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
 #' @return \code{GRanges} object
@@ -271,7 +271,7 @@ setMethod("CNV.import", signature(array_type = "character", directory = "charact
 #' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
         CNV.define_detail <- function(array_type = "450k", gene = "predefined") {
-            if(array_type %in% c("450k", "EPIC")) {
+            if(array_type %in% c("450k", "EPIC", "EPICv2")) {
             if(gene[1] == "predefined"){
               message("using set of predefined regions (hg19 genome)")
               object <- new("GRanges")
@@ -313,7 +313,7 @@ setMethod("CNV.import", signature(array_type = "character", directory = "charact
             names(subset) <- 1:length(subset)
             return(subset)
           } else {
-            message("please choose 450k, EPIC or mouse as array_type")
+            message("please choose 450k, EPIC, EPICv2 or mouse as array_type")
           }
           }
 

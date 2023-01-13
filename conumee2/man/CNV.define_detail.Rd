@@ -4,12 +4,12 @@
 \alias{CNV.define_detail}
 \title{CNV.define_detail}
 \usage{
-CNV.define_detail(array_type = "450k", symbol = "predefined")
+CNV.define_detail(array_type = "450k", gene = "predefined")
 }
 \arguments{
-\item{array_type}{character. One of \code{450k}, \code{EPIC} or \code{mouse}. Defaults to \code{450k}.}
+\item{array_type}{character. One of \code{450k}, \code{EPIC}, \code{EPICv2} or \code{mouse}. Defaults to \code{450k}.}
 
-\item{symbol}{character vector. Specify the genes by using their \code{SYMBOL} (case sensitive). Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.}
+\item{gene}{character vector. Specify the genes by using their \code{SYMBOL} (case sensitive). Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.}
 
 \item{...}{Additional parameters (\code{CNV.load} generic, currently not used).}
 }

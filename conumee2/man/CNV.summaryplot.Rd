@@ -46,7 +46,7 @@ CNV.genomeplot(x)
 CNV.genomeplot(x, chr = 'chr6')
 CNV.detailplot(x, name = 'PTEN')
 CNV.detailplot_wrap(x)
-CNV.summaryplot(x)
+CNV.summaryplot(x, threshold = 0.15)
 CNV.heatmap(x)
 
 # output text files
