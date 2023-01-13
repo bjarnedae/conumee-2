@@ -261,7 +261,7 @@ setMethod("CNV.import", signature(array_type = "character", directory = "charact
 #' CNV.define_detail
 #' @description Create a \code{GRanges} object for detail regions. Downstream plotting functions will create individual plots for each detail region.
 #' @param array_type character. One of \code{450k}, \code{EPIC} or \code{mouse}. Defaults to \code{450k}.
-#' @param symbol character vector. Specify the genes by using their \code{SYMBOL} (case sensitive). Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.
+#' @param gene character vector. Specify the genes by using their \code{SYMBOL} (case sensitive). Default to \code{predefined} which loads a predefined set of onco- and tumor suppressor genes.
 #' @param ... Additional parameters (\code{CNV.load} generic, currently not used).
 #' @return \code{GRanges} object
 #' @examples
@@ -270,9 +270,9 @@ setMethod("CNV.import", signature(array_type = "character", directory = "charact
 #' detail_regions
 #' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
-        CNV.define_detail <- function(array_type = "450k", symbol = "predefined") {
+        CNV.define_detail <- function(array_type = "450k", gene = "predefined") {
             if(array_type %in% c("450k", "EPIC")) {
-            if(symbol[1] == "predefined"){
+            if(gene[1] == "predefined"){
               message("using set of predefined regions (hg19 genome)")
               object <- new("GRanges")
               data("detail_regions")
@@ -281,19 +281,19 @@ setMethod("CNV.import", signature(array_type = "character", directory = "charact
             }
             data("genes")
 
-            if(any(symbol %in% genes$SYMBOL == FALSE)){
+            if(any(gene %in% genes$SYMBOL == FALSE)){
               ind <- which(symbol %in% genes$SYMBOL == FALSE)
               message(paste(symbol[ind]," is not part of the gene annotation. ", sep = ""))
             }
 
-            subset <- genes[which(genes$SYMBOL %in% symbol)]
+            subset <- genes[which(genes$SYMBOL %in% gene)]
             subset$thick <- IRanges(start = start(subset) - 100000, end = end(subset) + 100000)
             colnames(mcols(subset)) <- c("name", "thick")
             names(subset) <- 1:length(subset)
             return(subset)
             }
           if(array_type == "mouse") {
-            if(symbol[1] == "predefined"){
+            if(gene[1] == "predefined"){
               message("using set of predefined regions (mm10 genome)")
               object <- new("GRanges")
               data("detail_regions_mouse")
@@ -302,12 +302,12 @@ setMethod("CNV.import", signature(array_type = "character", directory = "charact
             }
             data("genes_mm10")
 
-            if(any(symbol %in% genes_mm10$SYMBOL == FALSE)){
-              ind <- which(symbol %in% genes_mm10$SYMBOL == FALSE)
-              message(paste(symbol[ind]," is not part of the gene annotation. ", sep = ""))
+            if(any(gene %in% genes_mm10$SYMBOL == FALSE)){
+              ind <- which(gene %in% genes_mm10$SYMBOL == FALSE)
+              message(paste(gene[ind]," is not part of the gene annotation. ", sep = ""))
             }
 
-            subset <- genes_mm10[which(genes_mm10$SYMBOL %in% symbol)]
+            subset <- genes_mm10[which(genes_mm10$SYMBOL %in% gene)]
             subset$thick <- subset$thick <- IRanges(start = start(subset) - 100000, end = end(subset) + 100000)
             colnames(mcols(subset)) <- c("name", "thick")
             names(subset) <- 1:length(subset)
