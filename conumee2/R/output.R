@@ -1673,70 +1673,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
   par(pty = "s")
   data("consensus_cancer_genes_hg19")
 
-  if(gene %in% consensus_cancer_genes_hg19$SYMBOL){
-
-  chr <- as.numeric(strsplit(as.character(seqnames(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)])), "chr")[[1]][2])
-  pq <- object@anno@genome[chr,3]
-
-  if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) < pq) {
-
-    shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
-    first <- IRanges(start = 1, end = object@anno@genome[chr,3])
-    first <- GRanges(seqnames = rownames(object@anno@genome)[chr], first)
-
-    h.1 <- findOverlaps(query = object@anno@bins, subject = first, type = "within", ignore.strand = TRUE)
-    ind.1 <- queryHits(h.1)
-    names.1 <- names(object@anno@bins[ind.1])
-
-    c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
-    qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = 0.8, plot.it = FALSE)
-    y.c <- qq.plot$y
-
-    h <- findOverlaps(query = consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)], subject = object@anno@bins, minoverlap = minoverlap)
-    bin_names <- names(object@anno@bins[subjectHits(h)])
-    ind <- which(names(y.c) %in% bin_names)
-
-    col <- rep("black", length(y.c))
-    col[ind] <- "red"
-    cex <- rep(0.5, length(y.c))
-    cex[ind] <- 1.2
-
-    qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene)
-    qqline(shifted.ratios[names.1])
-    lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
-    lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
-  }
-
-  if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) > pq) {
-
-    shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
-    second <- IRanges(start = object@anno@genome[chr,3]+1, end = object@anno@genome[chr,2])
-    second <- GRanges(seqnames = rownames(object@anno@genome)[chr], second)
-
-    h.2 <- findOverlaps(query = object@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
-    ind.2 <- queryHits(h.2)
-    names.2 <- names(object@anno@bins[ind.2])
-
-    c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
-    qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
-    y.c <- qq.plot$y
-
-    h <- findOverlaps(query = consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)], subject = object@anno@bins, minoverlap = minoverlap)
-    bin_names <- names(object@anno@bins[subjectHits(h)])
-    ind <- which(names(y.c) %in% bin_names)
-
-    col <- rep("black", length(y.c))
-    col[ind] <- "red"
-    cex <- rep(0.5, length(y.c))
-    cex[ind] <- 1.2
-
-    qqnorm(shifted.ratios[names.2], pch= 16, cex = cex, col = col, main = gene)
-    qqline(shifted.ratios[names.2])
-    lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
-    lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
-  }}
-
-  if(!gene %in% consensus_cancer_genes_hg19$SYMBOL){
+  if(gene %in% object@anno@detail$name){
 
     chr <- as.numeric(strsplit(as.character(seqnames(object@anno@detail[which(object@anno@detail$name == gene)])), "chr")[[1]][2])
     pq <- object@anno@genome[chr,3]
@@ -1785,6 +1722,69 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       y.c <- qq.plot$y
 
       h <- findOverlaps(query = object@anno@detail[which(object@anno@detail$name == gene)], subject = object@anno@bins, minoverlap = minoverlap)
+      bin_names <- names(object@anno@bins[subjectHits(h)])
+      ind <- which(names(y.c) %in% bin_names)
+
+      col <- rep("black", length(y.c))
+      col[ind] <- "red"
+      cex <- rep(0.5, length(y.c))
+      cex[ind] <- 1.2
+
+      qqnorm(shifted.ratios[names.2], pch= 16, cex = cex, col = col, main = gene)
+      qqline(shifted.ratios[names.2])
+      lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
+      lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
+    }}
+
+  else if(gene %in% consensus_cancer_genes_hg19$SYMBOL){
+
+    chr <- as.numeric(strsplit(as.character(seqnames(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)])), "chr")[[1]][2])
+    pq <- object@anno@genome[chr,3]
+
+    if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) < pq) {
+
+      shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
+      first <- IRanges(start = 1, end = object@anno@genome[chr,3])
+      first <- GRanges(seqnames = rownames(object@anno@genome)[chr], first)
+
+      h.1 <- findOverlaps(query = object@anno@bins, subject = first, type = "within", ignore.strand = TRUE)
+      ind.1 <- queryHits(h.1)
+      names.1 <- names(object@anno@bins[ind.1])
+
+      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
+      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = 0.8, plot.it = FALSE)
+      y.c <- qq.plot$y
+
+      h <- findOverlaps(query = consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)], subject = object@anno@bins, minoverlap = minoverlap)
+      bin_names <- names(object@anno@bins[subjectHits(h)])
+      ind <- which(names(y.c) %in% bin_names)
+
+      col <- rep("black", length(y.c))
+      col[ind] <- "red"
+      cex <- rep(0.5, length(y.c))
+      cex[ind] <- 1.2
+
+      qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene)
+      qqline(shifted.ratios[names.1])
+      lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
+      lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
+    }
+
+    if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) > pq) {
+
+      shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
+      second <- IRanges(start = object@anno@genome[chr,3]+1, end = object@anno@genome[chr,2])
+      second <- GRanges(seqnames = rownames(object@anno@genome)[chr], second)
+
+      h.2 <- findOverlaps(query = object@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
+      ind.2 <- queryHits(h.2)
+      names.2 <- names(object@anno@bins[ind.2])
+
+      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
+      qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
+      y.c <- qq.plot$y
+
+      h <- findOverlaps(query = consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)], subject = object@anno@bins, minoverlap = minoverlap)
       bin_names <- names(object@anno@bins[subjectHits(h)])
       ind <- which(names(y.c) %in% bin_names)
 
