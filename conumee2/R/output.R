@@ -332,7 +332,14 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
            message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", n_cgenes, "significant cancer genes.", sep = " "))
          }
 
-       cgenes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
+       # cgenes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
+
+       cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
+       focals <- object@detail$cancer_genes[[i]]
+       focals <- setdiff(focals, cgenes)
+       focals <- focals[1:nsig_cgenes]
+       cgenes <- c(cgenes, focals)
+       cgenes <- consensus_cancer_genes_hg19[cgenes]
 
 
        d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
@@ -477,7 +484,13 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
           message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", n_cgenes, "significant cancer genes.", sep = " "))
         }
 
-        cgenes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
+        # cgenes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
+        cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
+        focals <- object@detail$cancer_genes[[i]]
+        focals <- setdiff(focals, cgenes)
+        focals <- focals[1:nsig_cgenes]
+        cgenes <- c(cgenes, focals)
+        cgenes <- consensus_cancer_genes_hg19[cgenes]
 
 
         d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
@@ -623,7 +636,13 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
           message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", n_cgenes, "significant cancer genes.", sep = " "))
         }
 
-        cgenes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
+        # cgenes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
+        cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
+        focals <- object@detail$cancer_genes[[i]]
+        focals <- setdiff(focals, cgenes)
+        focals <- focals[1:nsig_cgenes]
+        cgenes <- c(cgenes, focals)
+        cgenes <- consensus_cancer_genes_hg19[cgenes]
 
 
         d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
