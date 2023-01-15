@@ -12,29 +12,7 @@
 
 #functions from the BoutrosLab.plotting.general package
 
-critical.value.ks.test <- function(n, conf, alternative = "two.sided") {
-
-  if(alternative == "one-sided") conf <- 1- (1-conf)*2;
-
-  # if the sample size is large(>50), under the null hypothesis, the absolute value of the difference
-  # of the empirical cdf and the theoretical cdf should follow a kolmogorov distribution
-
-    # pdf of the kolmogorov distribution minus the confidence level
-    kolmogorov.pdf <- function(x) {
-      i <- 1:10^4;
-      sqrt(2*pi) / x * sum(exp(-(2*i - 1)^2*pi^2/(8*x^2))) - conf;
-    }
-
-    # the root of the function above
-    # is the critical value for a specific confidence level multiplied by sqrt(n);
-    critical.value <- uniroot(kolmogorov.pdf , lower = 10^(-6), upper = 3)$root / sqrt(n);
-
-
-  return(critical.value);
-}
-
-
-create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf = 0.95, conf.method = "both", reference.line.method = "quartiles") {
+create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf = 0.95, conf.method = "both", reference.line.method = "robust") {
 
   # remove the NA and sort the sample
   # the QQ plot is the plot of the sorted sample against the corresponding quantile from the theoretical distribution
@@ -95,32 +73,6 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
     # confidence interval of pointwise method
     upper.pw <- fit.value + data.standard.error;
     lower.pw <- fit.value - data.standard.error;
-  }
-
-  ### simultaneous method
-  if (conf.method == "both" | conf.method == "simultaneous") {
-
-    # get the threshold value for the statistics---the absolute difference of the empirical cdf and the theoretical cdf
-    # Note that this statistics should follow a kolmogorov distribution when the sample size is large
-
-    # the critical value from the Kolmogorov-Smirnov Test
-    critical.value <- critical.value.ks.test(length(sorted.sample), conf);
-
-    # under the null hypothesis, get the CI for the probabilities
-    # the probabilities of the fitted value under the empirical cdf
-    expected.prob <- ecdf(sorted.sample)(fit.value);
-
-    # the probability should be in the interval [0, 1]
-    u <- (expected.prob + critical.value) >= 0 & (expected.prob + critical.value) <= 1;
-    l <- (expected.prob - critical.value) >= 0 & (expected.prob - critical.value) <= 1;
-
-    # get the corresponding quantiles from the theoretical distribution
-    z.upper <- distribution((expected.prob + critical.value)[u]);
-    z.lower <- distribution((expected.prob - critical.value)[l]);
-
-    # confidence interval of simultaneous method
-    upper.sim <- a + b * z.upper;
-    lower.sim <- a + b * z.lower;
   }
 
 
@@ -326,6 +278,7 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
        if(sig_cgenes){
 
        data("consensus_cancer_genes_hg19")
+       data("genes")
 
          cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
          focals <- object@detail$cancer_genes[[i]]
@@ -334,17 +287,16 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
          if(length(focals) >= nsig_cgenes){
            focals <- focals[1:nsig_cgenes]
            cgenes <- c(cgenes, focals)
-           cgenes <- consensus_cancer_genes_hg19[cgenes]
+           cgenes <- genes[cgenes]
          }
 
          if(length(focals) < nsig_cgenes){
-           message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", n_cgenes, "(additional) significant cancer genes.", sep = " "))
+           message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", focals, "(additional) significant cancer genes.", sep = " "))
            l <- length(focals)
            focals <- focals[1:l]
            cgenes <- c(cgenes, focals)
-           cgenes <- consensus_cancer_genes_hg19[cgenes]
+           cgenes <- genes[cgenes]
          }
-
 
        d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
        d2 <- data.frame(detail = names(cgenes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
@@ -482,6 +434,7 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
       if(sig_cgenes){
 
         data("consensus_cancer_genes_hg19")
+        data("genes")
 
         cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
         focals <- object@detail$cancer_genes[[i]]
@@ -490,16 +443,37 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
         if(length(focals) >= nsig_cgenes){
           focals <- focals[1:nsig_cgenes]
           cgenes <- c(cgenes, focals)
-          cgenes <- consensus_cancer_genes_hg19[cgenes]
+          cgenes <- genes[cgenes]
         }
 
         if(length(focals) < nsig_cgenes){
-          message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", n_cgenes, "(additional) significant cancer genes.", sep = " "))
+          message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", focals, "(additional) significant cancer genes.", sep = " "))
           l <- length(focals)
           focals <- focals[1:l]
           cgenes <- c(cgenes, focals)
-          cgenes <- consensus_cancer_genes_hg19[cgenes]
+          cgenes <- genes[cgenes]
         }
+
+
+
+        # d <- which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])
+        # d <- object@anno@detail[d]
+        # mcols(d) <- data.frame(SYMBOL = object@anno@detail$name)
+        #
+        # focals <- object@detail$cancer_genes[[i]]
+        # focals <- focals[-which(focals %in% object@anno@detail$name)]
+        #
+        # if(length(focals) >= nsig_cgenes){
+        #   focals <- focals[1:nsig_cgenes]
+        #   cgenes <- c(d,consensus_cancer_genes_hg19[focals])
+        # }
+        #
+        # if(length(focals) < nsig_cgenes){
+        #   message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", n_cgenes, "(additional) significant cancer genes.", sep = " "))
+        #   l <- length(focals)
+        #   focals <- focals[1:l]
+        #   cgenes <- c(d,consensus_cancer_genes_hg19[focals])
+        # }
 
         d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
         d2 <- data.frame(detail = names(cgenes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
@@ -638,25 +612,25 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
       if(sig_cgenes){
 
         data("consensus_cancer_genes_hg19")
+        data("genes")
 
         cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
         focals <- object@detail$cancer_genes[[i]]
         focals <- setdiff(focals, cgenes)
 
         if(length(focals) >= nsig_cgenes){
-        focals <- focals[1:nsig_cgenes]
-        cgenes <- c(cgenes, focals)
-        cgenes <- consensus_cancer_genes_hg19[cgenes]
+          focals <- focals[1:nsig_cgenes]
+          cgenes <- c(cgenes, focals)
+          cgenes <- genes[cgenes]
         }
 
         if(length(focals) < nsig_cgenes){
-          message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", n_cgenes, "(additional) significant cancer genes.", sep = " "))
+          message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", focals, "(additional) significant cancer genes.", sep = " "))
           l <- length(focals)
           focals <- focals[1:l]
           cgenes <- c(cgenes, focals)
-          cgenes <- consensus_cancer_genes_hg19[cgenes]
+          cgenes <- genes[cgenes]
         }
-
 
         d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
         d2 <- data.frame(detail = names(cgenes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
@@ -1637,7 +1611,7 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
 #' @param object \code{CNV.analysis} object.
 #' @param sample character. If \code{CNV.analysis} object contains multiple samples, please specify the sample name. You can check the sample names with \code{colnames(object@@fit$ratio)}. If the object contains just one sample, this parameter can be left blank.
 #' @param gene character. Please provide the gene symbol for the gene of interest. You can use this function for every gene that is part of the Cancer Gene Census (curated by the Sanger Institute) or part of the \code{detail_regions}.
-#' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.
+#' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.95}.
 #' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1L}.
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
 #' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
@@ -1655,7 +1629,7 @@ setGeneric("CNV.qqplot", function(object, ...) {
 })
 
 #' @rdname CNV.qqplot
-setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sample = as.character(), gene = as.character(), conf = 0.99, minoverlap = 1L, set_par = TRUE,
+setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sample = as.character(), gene = as.character(), conf = 0.95, minoverlap = 1L, set_par = TRUE,
                                                                      ...) {
 
   if(ncol(x@anno@genome) == 2){
@@ -1701,7 +1675,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       ind.1 <- queryHits(h.1)
       names.1 <- names(object@anno@bins[ind.1])
 
-      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
+      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
       qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = 0.8, plot.it = FALSE)
       y.c <- qq.plot$y
 
@@ -1714,8 +1688,8 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       cex <- rep(0.5, length(y.c))
       cex[ind] <- 1.2
 
-      qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene)
-      qqline(shifted.ratios[names.1])
+      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene, plot.it = TRUE)
+      abline(lm(qq.plot$y~qq.plot$x))
       lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
       lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
     }
@@ -1743,8 +1717,8 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       cex <- rep(0.5, length(y.c))
       cex[ind] <- 1.2
 
-      qqnorm(shifted.ratios[names.2], pch= 16, cex = cex, col = col, main = gene)
-      qqline(shifted.ratios[names.2])
+      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene, plot.it = TRUE)
+      abline(lm(qq.plot$y~qq.plot$x))
       lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
       lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
     }}
@@ -1764,7 +1738,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       ind.1 <- queryHits(h.1)
       names.1 <- names(object@anno@bins[ind.1])
 
-      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
+      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
       qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = 0.8, plot.it = FALSE)
       y.c <- qq.plot$y
 
@@ -1777,8 +1751,8 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       cex <- rep(0.5, length(y.c))
       cex[ind] <- 1.2
 
-      qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene)
-      qqline(shifted.ratios[names.1])
+      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene, plot.it = TRUE)
+      abline(lm(qq.plot$y~qq.plot$x))
       lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
       lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
     }
@@ -1793,7 +1767,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       ind.2 <- queryHits(h.2)
       names.2 <- names(object@anno@bins[ind.2])
 
-      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
+      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
       qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
       y.c <- qq.plot$y
 
@@ -1806,8 +1780,8 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       cex <- rep(0.5, length(y.c))
       cex[ind] <- 1.2
 
-      qqnorm(shifted.ratios[names.2], pch= 16, cex = cex, col = col, main = gene)
-      qqline(shifted.ratios[names.2])
+      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene, plot.it = TRUE)
+      abline(lm(qq.plot$y~qq.plot$x))
       lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
       lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
     }}

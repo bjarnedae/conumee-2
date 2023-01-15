@@ -237,29 +237,8 @@ setMethod("CNV.detail", signature(object = "CNV.analysis"), function(object) {
 })
 
 
-critical.value.ks.test <- function(n, conf, alternative = "two.sided") {
 
-  if(alternative == "one-sided") conf <- 1- (1-conf)*2;
-
-  # if the sample size is large(>50), under the null hypothesis, the absolute value of the difference
-  # of the empirical cdf and the theoretical cdf should follow a kolmogorov distribution
-
-  # pdf of the kolmogorov distribution minus the confidence level
-  kolmogorov.pdf <- function(x) {
-    i <- 1:10^4;
-    sqrt(2*pi) / x * sum(exp(-(2*i - 1)^2*pi^2/(8*x^2))) - conf;
-  }
-
-  # the root of the function above
-  # is the critical value for a specific confidence level multiplied by sqrt(n);
-  critical.value <- uniroot(kolmogorov.pdf , lower = 10^(-6), upper = 3)$root / sqrt(n);
-
-
-  return(critical.value);
-}
-
-
-create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf = 0.95, conf.method = "both", reference.line.method = "quartiles") {
+create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf = 0.95, conf.method = "both", reference.line.method = "robust") {
 
   # remove the NA and sort the sample
   # the QQ plot is the plot of the sorted sample against the corresponding quantile from the theoretical distribution
@@ -322,33 +301,6 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
     lower.pw <- fit.value - data.standard.error;
   }
 
-  ### simultaneous method
-  if (conf.method == "both" | conf.method == "simultaneous") {
-
-    # get the threshold value for the statistics---the absolute difference of the empirical cdf and the theoretical cdf
-    # Note that this statistics should follow a kolmogorov distribution when the sample size is large
-
-    # the critical value from the Kolmogorov-Smirnov Test
-    critical.value <- critical.value.ks.test(length(sorted.sample), conf);
-
-    # under the null hypothesis, get the CI for the probabilities
-    # the probabilities of the fitted value under the empirical cdf
-    expected.prob <- ecdf(sorted.sample)(fit.value);
-
-    # the probability should be in the interval [0, 1]
-    u <- (expected.prob + critical.value) >= 0 & (expected.prob + critical.value) <= 1;
-    l <- (expected.prob - critical.value) >= 0 & (expected.prob - critical.value) <= 1;
-
-    # get the corresponding quantiles from the theoretical distribution
-    z.upper <- distribution((expected.prob + critical.value)[u]);
-    z.lower <- distribution((expected.prob - critical.value)[l]);
-
-    # confidence interval of simultaneous method
-    upper.sim <- a + b * z.upper;
-    lower.sim <- a + b * z.lower;
-  }
-
-
   # return the values for constructing the Confidence Bands of one sample QQ plot
   # the list to store the returned values
   returned.values <- list(
@@ -369,7 +321,7 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
 #' CNV.focal
 #' @description This optional function provides filtering for diagnostically relevant CNVs (high level amplifications or homozygous deletions).
 #' @param object \code{CNV.analysis} object.
-#' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.
+#' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.95}.
 #' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1000L}.
 #' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
 #' @return A \code{CNV.analysis} object with significantly altered bins and genes from the Cancer Gene Census (curated by the Sanger Institute).
@@ -388,7 +340,7 @@ setGeneric("CNV.focal", function(object, ...) {
 })
 
 #' @rdname CNV.focal
-setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.99, minoverlap = 1000L,...){
+setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, minoverlap = 1000L,...){
 
   if(ncol(object@anno@genome) == 2) {
     stop("CNV.focal is not compatible with mouse arrays.")
@@ -422,7 +374,7 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
       names.2 <- names(object@anno@bins[ind.2])
 
       if (length(names.1)>0) {
-        c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise")
+        c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
         qq.plot <- qqnorm(bin.ratios[names.1], plot.it = FALSE)
         y.c <- qq.plot$y[order(qq.plot$x)]
         upper.outliers <- which(y.c>c.intervals$upper.pw)
@@ -433,7 +385,7 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
       }
 
       if (length(names.2)>0) {
-        c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
+        c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
         qq.plot <- qqnorm(bin.ratios[names.2], plot.it = FALSE)
         y.c <- qq.plot$y[order(qq.plot$x)]
         upper.outliers <- which(y.c>c.intervals$upper.pw)
