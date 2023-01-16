@@ -1704,7 +1704,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
       ind.2 <- queryHits(h.2)
       names.2 <- names(object@anno@bins[ind.2])
 
-      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise")
+      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
       qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
       y.c <- qq.plot$y
 
