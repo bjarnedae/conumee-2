@@ -150,7 +150,7 @@ setGeneric("CNV.genomeplot", function(object, ...) {
 #' @rdname CNV.genomeplot
 setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object, chr = "all",
            chrX = TRUE, chrY = TRUE, centromere = TRUE, detail = TRUE,
-           main = NULL, sig_cgenes = TRUE, nsig_cgenes = 5, output = NULL, directory = getwd(), ylim = c(-1.25, 1.25),
+           main = NULL, sig_cgenes = FALSE, nsig_cgenes = 3, output = NULL, directory = getwd(), ylim = c(-1.25, 1.25),
            bins_cex = "standardized", set_par = TRUE,
            width = 12, height = 6, res = 720, cols = c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")) {
 
@@ -278,45 +278,40 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
        if(sig_cgenes){
 
        data("consensus_cancer_genes_hg19")
-       data("genes")
 
-         cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
-         focals <- object@detail$cancer_genes[[i]]
-         focals <- setdiff(focals, cgenes)
 
-         if(length(focals) >= nsig_cgenes){
-           focals <- focals[1:nsig_cgenes]
-           cgenes <- c(cgenes, focals)
-           cgenes <- genes[cgenes]
-         }
+       if(any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
+         cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])]
+         mcols(cd_genes) <- data.frame(SYMBOL = cd_genes$name)
+         c_genes <- setdiff(object@detail$cancer_genes[[i]], cd_genes$SYMBOL)[1:nsig_cgenes]
+         c_genes <- c(cd_genes, consensus_cancer_genes_hg19[c_genes])
+         names(c_genes) <- c_genes$SYMBOL
+       }
 
-         if(length(focals) < nsig_cgenes){
-           message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", focals, "(additional) significant cancer genes.", sep = " "))
-           l <- length(focals)
-           focals <- focals[1:l]
-           cgenes <- c(cgenes, focals)
-           cgenes <- genes[cgenes]
-         }
+       if(!any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
+         c_genes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
+       }
 
-       d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
-       d2 <- data.frame(detail = names(cgenes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
 
-       cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(cgenes)]
+       d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
+       d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
+
+       cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
        cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
        cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
        cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
        cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
          cgenes.ratio < -0.85
 
-       lines(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-             + chr.cumsum0[as.vector(seqnames(cgenes))],
+       lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+             + chr.cumsum0[as.vector(seqnames(c_genes))],
              cgenes.ratio, type = "p", pch = 16, col = "red")
-       text(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-            + chr.cumsum0[as.vector(seqnames(cgenes))],
-            ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(cgenes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
-       text(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-            + chr.cumsum0[as.vector(seqnames(cgenes))],
-            ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(cgenes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
+       text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+            + chr.cumsum0[as.vector(seqnames(c_genes))],
+            ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
+       text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+            + chr.cumsum0[as.vector(seqnames(c_genes))],
+            ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
        }
  }
    if (set_par)
@@ -434,46 +429,20 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
       if(sig_cgenes){
 
         data("consensus_cancer_genes_hg19")
-        data("genes")
 
-        cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
-        focals <- object@detail$cancer_genes[[i]]
-        focals <- setdiff(focals, cgenes)
 
-        if(length(focals) >= nsig_cgenes){
-          focals <- focals[1:nsig_cgenes]
-          cgenes <- c(cgenes, focals)
-          cgenes <- genes[cgenes]
+        if(any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
+          cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])]
+          mcols(cd_genes) <- data.frame(SYMBOL = cd_genes$name)
+          c_genes <- setdiff(object@detail$cancer_genes[[i]], cd_genes$SYMBOL)[1:nsig_cgenes]
+          c_genes <- c(cd_genes, consensus_cancer_genes_hg19[c_genes])
+          names(c_genes) <- c_genes$SYMBOL
         }
 
-        if(length(focals) < nsig_cgenes){
-          message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", focals, "(additional) significant cancer genes.", sep = " "))
-          l <- length(focals)
-          focals <- focals[1:l]
-          cgenes <- c(cgenes, focals)
-          cgenes <- genes[cgenes]
+        if(!any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
+          c_genes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
         }
 
-
-
-        # d <- which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])
-        # d <- object@anno@detail[d]
-        # mcols(d) <- data.frame(SYMBOL = object@anno@detail$name)
-        #
-        # focals <- object@detail$cancer_genes[[i]]
-        # focals <- focals[-which(focals %in% object@anno@detail$name)]
-        #
-        # if(length(focals) >= nsig_cgenes){
-        #   focals <- focals[1:nsig_cgenes]
-        #   cgenes <- c(d,consensus_cancer_genes_hg19[focals])
-        # }
-        #
-        # if(length(focals) < nsig_cgenes){
-        #   message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", n_cgenes, "(additional) significant cancer genes.", sep = " "))
-        #   l <- length(focals)
-        #   focals <- focals[1:l]
-        #   cgenes <- c(d,consensus_cancer_genes_hg19[focals])
-        # }
 
         d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
         d2 <- data.frame(detail = names(cgenes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
@@ -612,25 +581,20 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
       if(sig_cgenes){
 
         data("consensus_cancer_genes_hg19")
-        data("genes")
 
-        cgenes <- intersect(object@anno@detail$name, object@detail$cancer_genes[[i]])
-        focals <- object@detail$cancer_genes[[i]]
-        focals <- setdiff(focals, cgenes)
 
-        if(length(focals) >= nsig_cgenes){
-          focals <- focals[1:nsig_cgenes]
-          cgenes <- c(cgenes, focals)
-          cgenes <- genes[cgenes]
+        if(any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
+          cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])]
+          mcols(cd_genes) <- data.frame(SYMBOL = cd_genes$name)
+          c_genes <- setdiff(object@detail$cancer_genes[[i]], cd_genes$SYMBOL)[1:nsig_cgenes]
+          c_genes <- c(cd_genes, consensus_cancer_genes_hg19[c_genes])
+          names(c_genes) <- c_genes$SYMBOL
         }
 
-        if(length(focals) < nsig_cgenes){
-          message(paste("Sample", colnames(object@fit$ratio)[i], "harbors only", focals, "(additional) significant cancer genes.", sep = " "))
-          l <- length(focals)
-          focals <- focals[1:l]
-          cgenes <- c(cgenes, focals)
-          cgenes <- genes[cgenes]
+        if(!any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
+          c_genes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
         }
+
 
         d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
         d2 <- data.frame(detail = names(cgenes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)

@@ -404,8 +404,16 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
     outliers <- sort(residuals, decreasing = TRUE)
     significant.bins[[i]] <- object@anno@bins[names(outliers)]
 
-    dif <- setdiff(object@anno@detail$name, consensus_cancer_genes_hg19$SYMBOL)
-    cgenes <- c(consensus_cancer_genes_hg19, genes[dif])
+    if(length(object@anno@detail) >= 1){
+      dif <- setdiff(consensus_cancer_genes_hg19$SYMBOL, object@anno@detail$name)
+      details <- object@anno@detail
+      mcols(details) <- data.frame(SYMBOL = object@anno@detail$name)
+      cgenes <- c(details, consensus_cancer_genes_hg19[dif])
+    }
+
+    if(length(object@anno@detail) == 0){
+      cgenes <- consensus_cancer_genes_hg19
+    }
 
     h.cancer_genes <- findOverlaps(query = object@anno@bins[names(outliers)], subject = cgenes, minoverlap = minoverlap)
     significant.genes <- cgenes[unique(subjectHits(h.cancer_genes))]$SYMBOL
