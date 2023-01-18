@@ -1593,7 +1593,7 @@ setGeneric("CNV.qqplot", function(object, ...) {
 })
 
 #' @rdname CNV.qqplot
-setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sample = as.character(), gene = as.character(), conf = 0.95, minoverlap = 1L, set_par = TRUE,
+setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sample = colnames(object@fit$ratio)[1], gene = as.character(), conf = 0.95, minoverlap = 1L, set_par = TRUE,
                                                                      ...) {
 
   if(ncol(x@anno@genome) == 2){
@@ -1615,7 +1615,7 @@ setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sam
   }
 
   if(ncol(object@fit$ratio) > 1){
-    if (length(sample) ==0){
+    if (!sample %in% colnames(object@fit$ratio)){
       stop("Please provide a valid sample name if the CNV analysis object comprises multiple samples. Check colnames(object@fit$ratio) for details.")
     }
     n = which(colnames(object@fit$ratio) == sample)
