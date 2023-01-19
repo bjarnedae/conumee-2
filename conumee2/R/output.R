@@ -181,6 +181,13 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
  #normal export
  if (is.null(output)){
 
+   chr.arms.p <- GRanges(seqnames = rownames(object@anno@genome), IRanges(start = 1, end = object@anno@genome$pq))
+   chr.arms.p$name <- paste(rownames(object@anno@genome), "p", sep = "")
+   chr.arms.q <- GRanges(seqnames = rownames(object@anno@genome), IRanges(start = object@anno@genome$pq+1, end = object@anno@genome$size))
+   chr.arms.q$name <- paste(rownames(object@anno@genome), "q", sep = "")
+   chr.arms <- sort(c(chr.arms.p, chr.arms.q))
+   names(chr.arms) <- chr.arms$name
+
    for (i in 1:ncol(object@fit$ratio)) {
      message(main[i])
 
@@ -279,6 +286,35 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
 
        data("consensus_cancer_genes_hg19")
 
+         h1 <- findOverlaps(query = object@anno@detail, subject = chr.arms)
+         detail.arms <- chr.arms[subjectHits(h1)]$name
+         names(detail.arms) <- object@anno@detail[queryHits(h1)]$name
+         na.details.names <- names(detail.arms[which(!detail.arms %in% object@detail$chromosome_arms[[i]])])
+
+        if(length(na.details.names) >= 1){ #flagging the detail regions where the approach is not applicable
+
+          c_genes <- object@anno@detail[object@anno@detail$name == na.details.names]
+          names(c_genes) <- object@anno@detail[object@anno@detail$name == na.details.names]$name
+          d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
+          d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
+
+          cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
+          cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
+          cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
+          cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
+          cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
+            cgenes.ratio < -0.85
+
+          lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+                + chr.cumsum0[as.vector(seqnames(c_genes))],
+                cgenes.ratio, type = "p", pch = 16, col = "#808080")
+          text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+               + chr.cumsum0[as.vector(seqnames(c_genes))],
+               ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "#808080")
+          text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+               + chr.cumsum0[as.vector(seqnames(c_genes))],
+               ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "#808080")
+       }
 
        if(any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
          cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])]
@@ -430,6 +466,35 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
 
         data("consensus_cancer_genes_hg19")
 
+        h1 <- findOverlaps(query = object@anno@detail, subject = chr.arms)
+        detail.arms <- chr.arms[subjectHits(h1)]$name
+        names(detail.arms) <- object@anno@detail[queryHits(h1)]$name
+        na.details.names <- names(detail.arms[which(!detail.arms %in% object@detail$chromosome_arms[[i]])])
+
+        if(length(na.details.names) >= 1){ #flagging the detail regions where the approach is not applicable
+
+          c_genes <- object@anno@detail[object@anno@detail$name == na.details.names]
+          names(c_genes) <- object@anno@detail[object@anno@detail$name == na.details.names]$name
+          d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
+          d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
+
+          cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
+          cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
+          cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
+          cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
+          cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
+            cgenes.ratio < -0.85
+
+          lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+                + chr.cumsum0[as.vector(seqnames(c_genes))],
+                cgenes.ratio, type = "p", pch = 16, col = "#808080")
+          text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+               + chr.cumsum0[as.vector(seqnames(c_genes))],
+               ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "#808080")
+          text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+               + chr.cumsum0[as.vector(seqnames(c_genes))],
+               ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "#808080")
+        }
 
         if(any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
           cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])]
@@ -444,25 +509,25 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
         }
 
 
-        d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
-        d2 <- data.frame(detail = names(cgenes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
+        d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
+        d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
 
-        cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(cgenes)]
+        cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
         cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
         cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
         cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
         cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
           cgenes.ratio < -0.85
 
-        lines(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-              + chr.cumsum0[as.vector(seqnames(cgenes))],
+        lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+              + chr.cumsum0[as.vector(seqnames(c_genes))],
               cgenes.ratio, type = "p", pch = 16, col = "red")
-        text(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-             + chr.cumsum0[as.vector(seqnames(cgenes))],
-             ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(cgenes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
-        text(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-             + chr.cumsum0[as.vector(seqnames(cgenes))],
-             ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(cgenes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
+        text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+             + chr.cumsum0[as.vector(seqnames(c_genes))],
+             ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
+        text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+             + chr.cumsum0[as.vector(seqnames(c_genes))],
+             ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
       }
 
     dev.off()
@@ -582,6 +647,35 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
 
         data("consensus_cancer_genes_hg19")
 
+        h1 <- findOverlaps(query = object@anno@detail, subject = chr.arms)
+        detail.arms <- chr.arms[subjectHits(h1)]$name
+        names(detail.arms) <- object@anno@detail[queryHits(h1)]$name
+        na.details.names <- names(detail.arms[which(!detail.arms %in% object@detail$chromosome_arms[[i]])])
+
+        if(length(na.details.names) >= 1){ #flagging the detail regions where the approach is not applicable
+
+          c_genes <- object@anno@detail[object@anno@detail$name == na.details.names]
+          names(c_genes) <- object@anno@detail[object@anno@detail$name == na.details.names]$name
+          d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
+          d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
+
+          cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
+          cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
+          cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
+          cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
+          cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
+            cgenes.ratio < -0.85
+
+          lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+                + chr.cumsum0[as.vector(seqnames(c_genes))],
+                cgenes.ratio, type = "p", pch = 16, col = "#808080")
+          text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+               + chr.cumsum0[as.vector(seqnames(c_genes))],
+               ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "#808080")
+          text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+               + chr.cumsum0[as.vector(seqnames(c_genes))],
+               ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "#808080")
+        }
 
         if(any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
           cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])]
@@ -596,25 +690,25 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
         }
 
 
-        d1 <- as.matrix(findOverlaps(query = cgenes, subject = object@anno@probes))
-        d2 <- data.frame(detail = names(cgenes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
+        d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
+        d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
 
-        cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(cgenes)]
+        cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
         cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
         cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
         cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
         cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
           cgenes.ratio < -0.85
 
-        lines(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-              + chr.cumsum0[as.vector(seqnames(cgenes))],
+        lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+              + chr.cumsum0[as.vector(seqnames(c_genes))],
               cgenes.ratio, type = "p", pch = 16, col = "red")
-        text(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-             + chr.cumsum0[as.vector(seqnames(cgenes))],
-             ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(cgenes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
-        text(start(cgenes) + (end(cgenes) - start(cgenes)) /2
-             + chr.cumsum0[as.vector(seqnames(cgenes))],
-             ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(cgenes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
+        text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+             + chr.cumsum0[as.vector(seqnames(c_genes))],
+             ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
+        text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+             + chr.cumsum0[as.vector(seqnames(c_genes))],
+             ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
       }
       dev.off()
     }

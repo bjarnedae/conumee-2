@@ -340,7 +340,7 @@ setGeneric("CNV.focal", function(object, ...) {
 })
 
 #' @rdname CNV.focal
-setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, minoverlap = 1000L,...){
+setMethod("CNV.focal", signature(object = "CNV.analysis"),function(object, conf = 0.95, minoverlap = 1000L,...){
 
   if(ncol(object@anno@genome) == 2) {
     stop("CNV.focal is not compatible with mouse arrays.")
@@ -350,18 +350,27 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
 
   significant.bins <- vector(mode = "list", length = ncol(object@fit$ratio))
   cancer.genes <- vector(mode = "list", length = ncol(object@fit$ratio))
+  chr.arms <- vector(mode = "list", length = ncol(object@fit$ratio))
 
   for (i in 1:ncol(object@fit$ratio)){
 
     message(paste(colnames(object@fit$ratio)[i]), " (",round(i/ncol(object@fit$ratio)*100, digits = 3), "%", ")", sep = "")
 
+    segments <- object@seg$summary[[i]]
+
     bin.ratios <- object@bin$ratio[[i]] - object@bin$shift[i]
 
     residuals <- as.numeric() #inner loop
+    chr_arms <- as.character()
     for (j in 1:nrow(object@anno@genome)) {
+
+      seg.chr <- GRanges(seqnames = rownames(object@anno@genome)[j], IRanges(start = segments[segments$chrom == rownames(object@anno@genome[j,]),]$loc.start, end = segments[segments$chrom == rownames(object@anno@genome[j,]),]$loc.end))
+      p <- restrict(seg.chr, start = 1, end = object@anno@genome[j, "pq"])
+      q <- restrict(seg.chr, start = object@anno@genome[j, "pq"]+1, end = object@anno@genome[j, "size"])
+
       first <- IRanges(start = 1, end = object@anno@genome[j,3])
       first <- GRanges(seqnames = rownames(object@anno@genome)[j], first)
-      second <- IRanges(start = object@anno@genome[j,3]+1, end = object@anno@genome[j,2])
+      second <- IRanges(start = object@anno@genome[j,"pq"]+1, end = object@anno@genome[j,"size"])
       second <- GRanges(seqnames = rownames(object@anno@genome)[j], second)
 
       h.1 <- findOverlaps(query = object@anno@bins, subject = first, type = "within", ignore.strand = TRUE)
@@ -373,7 +382,9 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
       names.1 <- names(object@anno@bins[ind.1])
       names.2 <- names(object@anno@bins[ind.2])
 
+      if(length(which(width(p) >= object@anno@genome[j, "pq"]/4)) < 2){
       if (length(names.1)>0) {
+        chr_arms_p <- paste("chr", j,"p", sep = "")
         c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
         qq.plot <- qqnorm(bin.ratios[names.1], plot.it = FALSE)
         y.c <- qq.plot$y[order(qq.plot$x)]
@@ -382,9 +393,11 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
         lower.outliers <- which(y.c<c.intervals$lower.pw)
         lower.residuals <- y.c[lower.outliers] - c.intervals$lower.pw[lower.outliers]
         residuals.1 <- c(abs(upper.residuals), abs(lower.residuals))
-      }
+      }}
 
+      if(length(which(width(p) >= (object@anno@genome[j,"size"] - (x@anno@genome[j, "pq"]+1))/4)) < 2){
       if (length(names.2)>0) {
+        chr_arms_q <- paste("chr", j,"q", sep = "")
         c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
         qq.plot <- qqnorm(bin.ratios[names.2], plot.it = FALSE)
         y.c <- qq.plot$y[order(qq.plot$x)]
@@ -393,12 +406,16 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
         lower.outliers <- which(y.c<c.intervals$lower.pw)
         lower.residuals <- y.c[lower.outliers] - c.intervals$lower.pw[lower.outliers]
         residuals.2 <- c(abs(upper.residuals), abs(lower.residuals))
-      }
+      }}
 
       my_out <- c(residuals.1, residuals.2)
+      my_out2 <- c(chr_arms_p, chr_arms_q)
       residuals <- c(residuals, my_out)
+      chr_arms <- c(chr_arms, my_out2)
       residuals.1 <- NULL
       residuals.2 <- NULL
+      chr_arms_p <- NULL
+      chr_arms_q <- NULL
     }
 
     outliers <- sort(residuals, decreasing = TRUE)
@@ -418,13 +435,16 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
     h.cancer_genes <- findOverlaps(query = object@anno@bins[names(outliers)], subject = cgenes, minoverlap = minoverlap)
     significant.genes <- cgenes[unique(subjectHits(h.cancer_genes))]$SYMBOL
     cancer.genes[[i]] <- significant.genes
+    chr.arms[[i]] <- chr_arms
 
   }
 
   names(significant.bins) <- colnames(object@fit$ratio)
   names(cancer.genes) <- colnames(object@fit$ratio)
+  names(chr.arms) <- colnames(object@fit$ratio)
   object@detail$significant_bins <- significant.bins
   object@detail$cancer_genes <- cancer.genes
+  object@detail$chromosome_arms <- chr.arms
 
   return(object)
 
