@@ -382,7 +382,7 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"),function(object, conf 
       names.1 <- names(object@anno@bins[ind.1])
       names.2 <- names(object@anno@bins[ind.2])
 
-      if(length(which(width(p) >= object@anno@genome[j, "pq"]/4)) < 2){
+      if(length(which(width(p) >= object@anno@genome[j, "pq"]/3)) < 2){
       if (length(names.1)>0) {
         chr_arms_p <- paste("chr", j,"p", sep = "")
         c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
@@ -395,7 +395,7 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"),function(object, conf 
         residuals.1 <- c(abs(upper.residuals), abs(lower.residuals))
       }}
 
-      if(length(which(width(p) >= (object@anno@genome[j,"size"] - (x@anno@genome[j, "pq"]+1))/4)) < 2){
+      if(length(which(width(p) >= (object@anno@genome[j,"size"] - (x@anno@genome[j, "pq"]+1))/3)) < 2){
       if (length(names.2)>0) {
         chr_arms_q <- paste("chr", j,"q", sep = "")
         c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
