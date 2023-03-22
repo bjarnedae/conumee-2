@@ -10,89 +10,6 @@
     xx
 }
 
-#functions from the BoutrosLab.plotting.general package
-
-create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf = 0.95, conf.method = "both", reference.line.method = "robust") {
-
-  # remove the NA and sort the sample
-  # the QQ plot is the plot of the sorted sample against the corresponding quantile from the theoretical distribution
-  sorted.sample <- sort(x[!is.na(x)]);
-
-  # the corresponding probabilities, should be (i - 0.5)/n, where i = 1,2,3,...,n
-  probabilities <- ppoints(length(sorted.sample));
-
-  # the corresponding quantile under the theoretical distribution
-  theoretical.quantile <- distribution(probabilities);
-
-  if(reference.line.method == "quartiles") {
-    # get the numbers of the 1/4 and 3/4 quantile in order to draw a reference line
-    quantile.x.axis <- quantile(sorted.sample, c(0.25, 0.75));
-    quantile.y.axis <- distribution(c(0.25, 0.75));
-
-    # the intercept and slope of the reference line
-    b <- (quantile.x.axis[2] - quantile.x.axis[1]) / (quantile.y.axis[2] - quantile.y.axis[1]);
-    a <- quantile.x.axis[1] - b * quantile.y.axis[1];
-  }
-  if(reference.line.method == "diagonal") {
-    a <- 0;
-    b <- 1;
-  }
-  if(reference.line.method == "robust") {
-    coef.linear.model <- coef(lm(sorted.sample ~ theoretical.quantile));
-    a <- coef.linear.model[1];
-    b <- coef.linear.model[2];
-  }
-
-
-  # the reference line
-  fit.value <- a + b * theoretical.quantile;
-
-  # create some vectors to store the returned values
-  upper.pw <- NULL;
-  lower.pw <- NULL;
-  upper.sim <- NULL;
-  lower.sim <- NULL;
-  u <- NULL;	# a vector of logical value of whether the probabilities are in the interval [0,1] for the upper band
-  l <- NULL;	# a vector of logical value of whether the probabilities are in the interval [0,1] for the lower band
-
-  ### pointwise method
-  if (conf.method == "both" | conf.method == "pointwise") {
-
-    # create the numeric derivative of the theoretical quantile distribution
-    numeric.derivative <- function(p) {
-      # set the change in independent variable
-      h <- 10^(-6);
-      if (h * length(sorted.sample) > 1) { h <- 1 / (length(sorted.sample) + 1); }
-      # the function
-      return((distribution(p + h/2) - distribution(p - h/2)) / h);
-    }
-
-    # the standard errors of pointwise method
-    data.standard.error <- b * numeric.derivative(probabilities) * qnorm(1 - (1 - conf)/2) * sqrt(probabilities * (1 - probabilities) / length(sorted.sample));
-
-    # confidence interval of pointwise method
-    upper.pw <- fit.value + data.standard.error;
-    lower.pw <- fit.value - data.standard.error;
-  }
-
-
-  # return the values for constructing the Confidence Bands of one sample QQ plot
-  # the list to store the returned values
-  returned.values <- list(
-    a = a,
-    b = b,
-    z = theoretical.quantile,
-    upper.pw = upper.pw,
-    lower.pw = lower.pw,
-    u = u,
-    l = l,
-    upper.sim = upper.sim,
-    lower.sim = lower.sim
-  );
-  return (returned.values);
-}
-
-
 #'
 #'
 #' CNV.genomeplot
@@ -103,11 +20,11 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
 #' @param detail logical. If available, include labels of detail regions? Defaults to \code{TRUE}.
 #' @param bins_cex character. The size of the individual bin dots is reversely proportional its variance of included probes' log2-ratios. Choose either \code{standardized} for fixed dot sizes (to make plots from different samples comparable) or \code{sample_level} (to scale the dot sizes for each sample individually). Default to \code{standardized}.
 #' @param sig_cgenes logical. Should the significant genes from the Cancer Gene Census be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.
-#' @param nsig_cgenes numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{5}.
-#' @param main character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length as the number of samples.
-#' @param ylim numeric vector. The y limits of the plot. Defaults to \code{c(-1.25, 1.25)}.
+#' @param nsig_cgenes numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{3}.
+#' @param main character vector. Title of the plot(s). Default to sample names. Please provide a vector of the same length as the number of samples.
+#' @param ylim numeric vector. The y limits of the plot. Default to \code{c(-1.25, 1.25)}.
 #' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
-#' @param cols character vector. Colors to use for plotting intensity levels of bins. Centered around 0. Defaults to \code{c('red', 'red', 'lightgrey', 'green', 'green')}.
+#' @param cols character vector. Colors to use for plotting intensity levels of bins. Centered around 0. Defaults to \code{c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")}.
 #' @param directory character. Export directory for saving the files
 #' @param output character. Choose between \code{output} (to display it in the graphical output) or \code{pdf} and \code{png} to save it. Defaults to \code{output}.
 #' @param width numeric. Width in inches of the saved files. Defaults to \code{12}.
@@ -131,7 +48,7 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
 #' # output plots
 #' CNV.genomeplot(x)
 #' CNV.genomeplot(x, chr = 'chr6')
-#' CNV.genomeplot(x, output = "pdf", directory = dir)
+#' CNV.genomeplot(x, output = "pdf", directory = dir, sig_cgenes = TRUE)
 #' CNV.detailplot(x, name = 'PTEN')
 #' CNV.detailplot_wrap(x)
 #' CNV.summaryplot(x)
@@ -148,9 +65,8 @@ setGeneric("CNV.genomeplot", function(object, ...) {
 })
 
 #' @rdname CNV.genomeplot
-setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object, chr = "all",
-           chrX = TRUE, chrY = TRUE, centromere = TRUE, detail = TRUE,
-           main = NULL, sig_cgenes = FALSE, nsig_cgenes = 3, output = "output", directory = getwd(), ylim = c(-1.25, 1.25),
+setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object, chr = "all", centromere = TRUE, detail = TRUE,
+           main = NULL, sig_cgenes = TRUE, nsig_cgenes = 3, output = "output", directory = getwd(), ylim = c(-1.25, 1.25),
            bins_cex = "standardized", set_par = TRUE,
            width = 12, height = 6, res = 720, cols = c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")){
 
@@ -179,14 +95,8 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
     stop("please provide names for every sample")
   }
 
-   chr.arms.p <- GRanges(seqnames = rownames(object@anno@genome), IRanges(start = 1, end = object@anno@genome$pq))
-   chr.arms.p$name <- paste(rownames(object@anno@genome), "p", sep = "")
-   chr.arms.q <- GRanges(seqnames = rownames(object@anno@genome), IRanges(start = object@anno@genome$pq+1, end = object@anno@genome$size))
-   chr.arms.q$name <- paste(rownames(object@anno@genome), "q", sep = "")
-   chr.arms <- sort(c(chr.arms.p, chr.arms.q))
-   names(chr.arms) <- chr.arms$name
-
    for (i in 1:ncol(object@fit$ratio)) {
+
      message(main[i])
 
       if(output == "pdf"){
@@ -268,7 +178,7 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
      }
 
      # detail
-     if (detail & length(object@detail) > 0) {
+     if (detail & length(object@detail) > 0 & ncol(object@anno@genome) == 2) {
        detail.ratio <- object@detail$ratio[[i]] - object@bin$shift[i]
        detail.ratio[detail.ratio < ylim[1]] <- ylim[1]
        detail.ratio[detail.ratio > ylim[2]] <- ylim[2]
@@ -277,117 +187,40 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
 
        lines(start(object@anno@detail) + (end(object@anno@detail) - start(object@anno@detail)) /2
              + chr.cumsum0[as.vector(seqnames(object@anno@detail))],
-             detail.ratio, type = "p", pch = 16, col = "darkblue")
+             detail.ratio, type = "p", pch = 16, col = "black")
        text(start(object@anno@detail) + (end(object@anno@detail) - start(object@anno@detail)) /2
             + chr.cumsum0[as.vector(seqnames(object@anno@detail))],
-            ifelse(detail.ratio.above, detail.ratio, NA), labels = paste("  ", values(object@anno@detail)$name, sep = ""), adj = c(0,0.5),srt = 90, col = "darkblue")
+            ifelse(detail.ratio.above, detail.ratio, NA), labels = paste("  ", values(object@anno@detail)$name, sep = ""), adj = c(0,0.5),srt = 90, col = "black")
        text(start(object@anno@detail) + (end(object@anno@detail) - start(object@anno@detail)) /2
             + chr.cumsum0[as.vector(seqnames(object@anno@detail))],
-            ifelse(detail.ratio.above, NA, detail.ratio), labels = paste(values(object@anno@detail)$name, "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "darkblue")
+            ifelse(detail.ratio.above, NA, detail.ratio), labels = paste(values(object@anno@detail)$name, "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "black")
+
+  } else if(ncol(object@anno@genome) != 2 & detail & length(object@detail)) {
+
+    detail.ratio <- object@detail$ratio[[i]] - object@bin$shift[i]
+    detail.ratio[detail.ratio < ylim[1]] <- ylim[1]
+    detail.ratio[detail.ratio > ylim[2]] <- ylim[2]
+    detail.ratio.above <- (detail.ratio > 0 & detail.ratio < 0.85) |
+      detail.ratio < -0.85
+
+    lines(start(object@anno@detail) + (end(object@anno@detail) - start(object@anno@detail)) /2
+          + chr.cumsum0[as.vector(seqnames(object@anno@detail))],
+          detail.ratio, type = "p", pch = 16, col = "black")
+    text(start(object@anno@detail) + (end(object@anno@detail) - start(object@anno@detail)) /2
+         + chr.cumsum0[as.vector(seqnames(object@anno@detail))],
+         ifelse(detail.ratio.above, detail.ratio, NA), labels = paste("  ", values(object@anno@detail)$name, sep = ""), adj = c(0,0.5),srt = 90, col = "black")
+    text(start(object@anno@detail) + (end(object@anno@detail) - start(object@anno@detail)) /2
+         + chr.cumsum0[as.vector(seqnames(object@anno@detail))],
+         ifelse(detail.ratio.above, NA, detail.ratio), labels = paste(values(object@anno@detail)$name, "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "black")
 
 
+    if(!is.null(object@detail$sig.genes)){
 
-     if(ncol(object@anno@genome) == 2){ #disabling for the mouse arrays
-       sig_cgenes = FALSE
-     }
+    if(any(object@anno@detail$name %in% object@detail$sig.genes[[i]])) {
 
-       data("consensus_cancer_genes_hg19")
-
-         h1 <- findOverlaps(query = object@anno@detail, subject = chr.arms)
-         detail.arms <- chr.arms[subjectHits(h1)]$name
-         names(detail.arms) <- object@anno@detail[queryHits(h1)]$name
-         na.details.names <- names(detail.arms[which(!detail.arms %in% object@detail$chromosome_arms[[i]])])
-
-         if(length(na.details.names) >= 1){ #flagging the detail regions where the approach is not applicable
-
-           c_genes <- object@anno@detail[object@anno@detail$name == na.details.names]
-           names(c_genes) <- object@anno@detail[object@anno@detail$name == na.details.names]$name
-           d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
-           d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
-
-           cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
-           cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
-           cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
-           cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
-           cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
-             cgenes.ratio < -0.85
-
-           lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-                 + chr.cumsum0[as.vector(seqnames(c_genes))],
-                 cgenes.ratio, type = "p", pch = 16, col = "#808080")
-           text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-                + chr.cumsum0[as.vector(seqnames(c_genes))],
-                ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "#808080")
-           text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-                + chr.cumsum0[as.vector(seqnames(c_genes))],
-                ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "#808080")
-         }
-
-
-    if(sig_cgenes) {
-       if(any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
-         cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])]
-         mcols(cd_genes) <- data.frame(SYMBOL = cd_genes$name)
-         c_genes <- setdiff(object@detail$cancer_genes[[i]], cd_genes$SYMBOL)[1:nsig_cgenes]
-         c_genes <- c(cd_genes, consensus_cancer_genes_hg19[c_genes])
-         names(c_genes) <- c_genes$SYMBOL
-       }
-
-       if(!any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])){
-         c_genes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
-       }
-
-      d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
-      d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
-
-      cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
-      cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
-      cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
-      cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
-      cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
-        cgenes.ratio < -0.85
-
-      lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-            + chr.cumsum0[as.vector(seqnames(c_genes))],
-            cgenes.ratio, type = "p", pch = 16, col = "red")
-      text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-           + chr.cumsum0[as.vector(seqnames(c_genes))],
-           ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
-      text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-           + chr.cumsum0[as.vector(seqnames(c_genes))],
-           ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
-
-      }
-
-         if(!sig_cgenes){
-           if(any(object@anno@detail$name %in% object@detail$cancer_genes[[i]])) {
-             c_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$cancer_genes[[i]])]
-             mcols(c_genes) <- data.frame(SYMBOL = c_genes$name)
-             names(c_genes) <- c_genes$SYMBOL
-
-             d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
-             d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
-
-             cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
-             cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
-             cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
-             cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
-             cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
-               cgenes.ratio < -0.85
-
-             lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-                   + chr.cumsum0[as.vector(seqnames(c_genes))],
-                   cgenes.ratio, type = "p", pch = 16, col = "red")
-             text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-                  + chr.cumsum0[as.vector(seqnames(c_genes))],
-                  ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
-             text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
-                  + chr.cumsum0[as.vector(seqnames(c_genes))],
-                  ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
-           }
-         }} else if(sig_cgenes) {
-           data("consensus_cancer_genes_hg19")
-           c_genes <- consensus_cancer_genes_hg19[object@detail$cancer_genes[[i]][1:nsig_cgenes]]
+           c_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$sig.genes[[i]])]
+           mcols(c_genes) <- data.frame(SYMBOL = c_genes$name)
+           names(c_genes) <- c_genes$SYMBOL
 
            d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
            d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
@@ -410,10 +243,46 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
                 ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
          }
 
+    if(sig_cgenes) {
+
+      data("consensus_cancer_genes_hg19")
+
+       if(any(object@anno@detail$name %in% object@detail$sig.genes[[i]])){
+         cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$sig.genes[[i]])]
+         mcols(cd_genes) <- data.frame(SYMBOL = cd_genes$name)
+         c_genes <- setdiff(object@detail$sig.genes[[i]], cd_genes$SYMBOL)[1:nsig_cgenes]
+         c_genes <- c(cd_genes, consensus_cancer_genes_hg19[c_genes])
+         names(c_genes) <- c_genes$SYMBOL
+       } else{
+         c_genes <- consensus_cancer_genes_hg19[object@detail$sig.genes[[i]][1:nsig_cgenes]]
+       }
+
+      d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
+      d2 <- data.frame(detail = names(c_genes)[d1[,"queryHits"]], probe = names(object@anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
+
+      cgenes.ratio <- sapply(split(object@fit$ratio[d2[, "probe"],i], d2[, "detail"]), median, na.rm = TRUE)[names(c_genes)]
+      cgenes.ratio <- cgenes.ratio - object@bin$shift[i]
+      cgenes.ratio[cgenes.ratio < ylim[1]] <- ylim[1]
+      cgenes.ratio[cgenes.ratio > ylim[2]] <- ylim[2]
+      cgenes.ratio.above <- (cgenes.ratio > 0 & cgenes.ratio < 0.85) |
+        cgenes.ratio < -0.85
+
+      lines(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+            + chr.cumsum0[as.vector(seqnames(c_genes))],
+            cgenes.ratio, type = "p", pch = 16, col = "red")
+      text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+           + chr.cumsum0[as.vector(seqnames(c_genes))],
+           ifelse(cgenes.ratio.above, cgenes.ratio, NA), labels = paste("  ", names(c_genes), sep = ""), adj = c(0,0.5), srt = 90, col = "red")
+      text(start(c_genes) + (end(c_genes) - start(c_genes)) /2
+           + chr.cumsum0[as.vector(seqnames(c_genes))],
+           ifelse(cgenes.ratio.above, NA, cgenes.ratio), labels = paste(names(c_genes), "  ", sep = ""), adj = c(1, 0.5), srt = 90, col = "red")
+
+    }}}
+
      if(is.element(output, c("pdf", "png"))){
        dev.off()
      }
-   }
+    }
 
    if(is.element(output, c("pdf", "png"))){
      message(paste(ncol(object@fit$ratio)," files were created.", sep = ""))
@@ -1250,20 +1119,25 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
   }
 })
 
+
 #' CNV.plotly
 #'
 #' \code{CNV.plotly} plots an interactive copy number profile.
 #'
-#' @param x A \code{CNVanalysis} object after \code{CNV.segment} is performed.
+#' @param x A \code{CNV.analysis} object after \code{CNV.segment} and \code{CNV.detail} is performed.
 #' @param sample character. Name of the single sample that should be plotted. Default to first sample in the set of query samples. Check sample names with \code{colnames(object@@fit$ratio)}
 #' @export
 #' @import ggplot2
 #' @import plotly
 
-CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
+CNV.plotly <- function(x, sample = colnames(x@fit$ratio)[1]){
 
   if (!any(colnames(x@fit$coef) == sample)){
     stop(message("Please provide the correct sample name."))
+  }
+
+  if(is.null(x@anno@detail)){
+    stop("Please use CNV.detail prior to CNV.plotly.")
   }
 
   sample_n <- which(colnames(x@fit$coef) == sample)
@@ -1273,8 +1147,6 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
   bin.ratio[bin.ratio < ylim[1]] <- ylim[1]
   bin.ratio[bin.ratio > ylim[2]] <- ylim[2]
   cols2 = c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")
-
-
 
   chr <- x@anno@genome$chr
   chr.cumsum0 <- .cumsum0(x@anno@genome[chr, "size"], n = chr)
@@ -1296,7 +1168,7 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
 
   df <- data.frame(y,bin.ratio,bin.ratio.cols)
 
-  xs<- x@seg$summary[[sample_n]]$loc.start + chr.cumsum0[x@seg$summary[[sample_n]]$chrom]
+  xs<-  x@seg$summary[[sample_n]]$loc.start + chr.cumsum0[x@seg$summary[[sample_n]]$chrom]
   xe <- x@seg$summary[[sample_n]]$loc.end + chr.cumsum0[x@seg$summary[[sample_n]]$chrom]
   ys <- x@seg$summary[[sample_n]]$seg.median - x@bin$shift[sample_n]
   ye <- x@seg$summary[[sample_n]]$seg.median - x@bin$shift[sample_n]
@@ -1326,8 +1198,8 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
     scale_x_continuous(breaks=tickl,labels = c(chr))+#,expand = c(0, 0),limits = c(0, max(x)))+
     theme(axis.text.x= element_text(size=10,angle = 90))
 
-  suppressWarnings(ggp <- plotly::ggplotly(p))
-  suppressWarnings(ggpb <- plotly::plotly_build(ggp))
+  ggp <- ggplotly(p)
+  ggpb <- plotly_build(ggp)
 
   ggpb$x$data[[1]]$text <- paste0(seqnames(x@anno@bins),"<br>","start: ",
                                   start(x@anno@bins),"<br>","end: ",end(x@anno@bins),"<br>",
@@ -1338,7 +1210,7 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
                                   x@seg$summary[[sample_n]]$loc.start,"<br>","end: ",x@seg$summary[[sample_n]]$loc.end,"<br>",
                                   "median: ",x@seg$summary[[sample_n]]$seg.median)
   ggpb$x$data[[5]]$text <- values(x@anno@detail)$name
-  suppressWarnings(ggpb%>%toWebGL())
+  ggpb%>%suppressWarnings(toWebGL())
   }
 
   if (ncol(x@anno@genome) == 2){
@@ -1356,8 +1228,8 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
       theme(axis.text.x= element_text(size=10,angle = 90))
 
 
-  suppressWarnings(ggp <- plotly::ggplotly(p))
-  suppressWarnings(ggpb <- plotly::plotly_build(ggp))
+  ggp <- ggplotly(p)
+  ggpb <- plotly_build(ggp)
 
   ggpb$x$data[[1]]$text <- paste0(seqnames(x@anno@bins),"<br>","start: ",
                                   start(x@anno@bins),"<br>","end: ",end(x@anno@bins),"<br>",
@@ -1366,194 +1238,13 @@ CNV.plotly <- function(x, sample = colnames(x@fit$coef)[1]){
                                   x@seg$summary[[sample_n]]$loc.start,"<br>","end: ",x@seg$summary[[sample_n]]$loc.end,"<br>",
                                   "median: ",x@seg$summary[[sample_n]]$seg.median)
   ggpb$x$data[[4]]$text <- values(x@anno@detail)$name
-  suppressWarnings(ggpb%>%toWebGL())
-}}
-
-
-
-#' CNV.qqplot
-#' @description Create a qqplot for the chromosome arm that contains the gene of interest. This plot should be used supportively to investigate diagnostically relevant high-level changes in the copy number.
-#' @param object \code{CNV.analysis} object.
-#' @param sample character. If \code{CNV.analysis} object contains multiple samples, please specify the sample name. You can check the sample names with \code{colnames(object@@fit$ratio)}. If the object contains just one sample, this parameter can be left blank.
-#' @param gene character. Please provide the gene symbol for the gene of interest. You can use this function for every gene that is part of the Cancer Gene Census (curated by the Sanger Institute) or part of the \code{detail_regions}.
-#' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.95}.
-#' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1L}.
-#' @param set_par logical. Use recommended graphical parameters for \code{oma} and \code{mar}? Defaults to \code{TRUE}. Original parameters are restored afterwards.
-#' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
-#' @return \code{NULL}.
-#' @details This function creates a qqplot that illustrates if a gene of interest is part of the normal distribution of the bins' log2-ratios in the corresponding chromosome arm or if it should be considered as an outlier. The latter might indicate a high level change in copy number.
-#' To create the confidence intervals, the \code{BoutrosLab.plotting.general} package is used with \code{method = pointwise}. Bins that overlap the gene of interest are highlighted in red.
-#' @examples
-#'
-#' CNV.qqplot(x, gene = "EGFR", conf = 0.99, minoverlap = 10000L)
-#'
-#' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
-#' @export
-setGeneric("CNV.qqplot", function(object, ...) {
-  standardGeneric("CNV.qqplot")
-})
-
-#' @rdname CNV.qqplot
-setMethod("CNV.qqplot", signature(object = "CNV.analysis"), function(object, sample = colnames(object@fit$ratio)[1], gene = as.character(), conf = 0.95, minoverlap = 1L, set_par = TRUE,
-                                                                     ...) {
-
-  if(ncol(x@anno@genome) == 2){
-    stop("CNV.plotly is not compatible with mouse arrays.")
+  ggpb%>%suppressWarnings(toWebGL())
   }
+  return(ggpb)
+   }
 
-  if (length(gene)== 0) {
-    stop("Please provide a valid gene symbol.")
-  }
 
-  if (set_par) {
-    mfrow_original <- par()$mfrow
-    mar_original <- par()$mar
-    oma_original <- par()$oma
-  }
 
-  if(ncol(object@fit$ratio) == 1){
-    n =1
-  }
 
-  if(ncol(object@fit$ratio) > 1){
-    if (!sample %in% colnames(object@fit$ratio)){
-      stop("Please provide a valid sample name if the CNV analysis object comprises multiple samples. Check colnames(object@fit$ratio) for details.")
-    }
-    n = which(colnames(object@fit$ratio) == sample)
-  }
-
-  par(pty = "s")
-  data("consensus_cancer_genes_hg19")
-
-  if(gene %in% object@anno@detail$name){
-
-    chr <- as.numeric(strsplit(as.character(seqnames(object@anno@detail[which(object@anno@detail$name == gene)])), "chr")[[1]][2])
-    pq <- object@anno@genome[chr,3]
-
-    if(start(object@anno@detail[which(object@anno@detail$name == gene)]) < pq) {
-
-      shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
-      first <- IRanges(start = 1, end = object@anno@genome[chr,3])
-      first <- GRanges(seqnames = rownames(object@anno@genome)[chr], first)
-
-      h.1 <- findOverlaps(query = object@anno@bins, subject = first, type = "within", ignore.strand = TRUE)
-      ind.1 <- queryHits(h.1)
-      names.1 <- names(object@anno@bins[ind.1])
-
-      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
-      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = 0.8, plot.it = FALSE)
-      y.c <- qq.plot$y
-
-      h <- findOverlaps(query = object@anno@detail[which(object@anno@detail$name == gene)], subject = object@anno@bins, minoverlap = minoverlap)
-      bin_names <- names(object@anno@bins[subjectHits(h)])
-      ind <- which(names(y.c) %in% bin_names)
-
-      col <- rep("black", length(y.c))
-      col[ind] <- "red"
-      cex <- rep(0.5, length(y.c))
-      cex[ind] <- 1.2
-
-      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene, plot.it = TRUE)
-      abline(lm(qq.plot$y~qq.plot$x))
-      lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
-      lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
-    }
-
-    if(start(object@anno@detail[which(object@anno@detail$name == gene)]) > pq) {
-
-      shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
-      second <- IRanges(start = object@anno@genome[chr,3]+1, end = object@anno@genome[chr,2])
-      second <- GRanges(seqnames = rownames(object@anno@genome)[chr], second)
-
-      h.2 <- findOverlaps(query = object@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
-      ind.2 <- queryHits(h.2)
-      names.2 <- names(object@anno@bins[ind.2])
-
-      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
-      qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
-      y.c <- qq.plot$y
-
-      h <- findOverlaps(query = object@anno@detail[which(object@anno@detail$name == gene)], subject = object@anno@bins, minoverlap = minoverlap)
-      bin_names <- names(object@anno@bins[subjectHits(h)])
-      ind <- which(names(y.c) %in% bin_names)
-
-      col <- rep("black", length(y.c))
-      col[ind] <- "red"
-      cex <- rep(0.5, length(y.c))
-      cex[ind] <- 1.2
-
-      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene, plot.it = TRUE)
-      abline(lm(qq.plot$y~qq.plot$x))
-      lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
-      lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
-    }}
-
-  else if(gene %in% consensus_cancer_genes_hg19$SYMBOL){
-
-    chr <- as.numeric(strsplit(as.character(seqnames(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)])), "chr")[[1]][2])
-    pq <- object@anno@genome[chr,3]
-
-    if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) < pq) {
-
-      shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
-      first <- IRanges(start = 1, end = object@anno@genome[chr,3])
-      first <- GRanges(seqnames = rownames(object@anno@genome)[chr], first)
-
-      h.1 <- findOverlaps(query = object@anno@bins, subject = first, type = "within", ignore.strand = TRUE)
-      ind.1 <- queryHits(h.1)
-      names.1 <- names(object@anno@bins[ind.1])
-
-      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
-      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = 0.8, plot.it = FALSE)
-      y.c <- qq.plot$y
-
-      h <- findOverlaps(query = consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)], subject = object@anno@bins, minoverlap = minoverlap)
-      bin_names <- names(object@anno@bins[subjectHits(h)])
-      ind <- which(names(y.c) %in% bin_names)
-
-      col <- rep("black", length(y.c))
-      col[ind] <- "red"
-      cex <- rep(0.5, length(y.c))
-      cex[ind] <- 1.2
-
-      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene, plot.it = TRUE)
-      abline(lm(qq.plot$y~qq.plot$x))
-      lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
-      lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
-    }
-
-    if(start(consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)]) > pq) {
-
-      shifted.ratios <- object@bin$ratio[[n]] - object@bin$shift[n]
-      second <- IRanges(start = object@anno@genome[chr,3]+1, end = object@anno@genome[chr,2])
-      second <- GRanges(seqnames = rownames(object@anno@genome)[chr], second)
-
-      h.2 <- findOverlaps(query = object@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
-      ind.2 <- queryHits(h.2)
-      names.2 <- names(object@anno@bins[ind.2])
-
-      c.intervals <- create.qqplot.fit.confidence.interval(shifted.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
-      qq.plot <- qqnorm(shifted.ratios[names.2], plot.it = FALSE)
-      y.c <- qq.plot$y
-
-      h <- findOverlaps(query = consensus_cancer_genes_hg19[which(consensus_cancer_genes_hg19$SYMBOL == gene)], subject = object@anno@bins, minoverlap = minoverlap)
-      bin_names <- names(object@anno@bins[subjectHits(h)])
-      ind <- which(names(y.c) %in% bin_names)
-
-      col <- rep("black", length(y.c))
-      col[ind] <- "red"
-      cex <- rep(0.5, length(y.c))
-      cex[ind] <- 1.2
-
-      qq.plot <- qqnorm(shifted.ratios[names.1], pch= 16, cex = cex, col = col, main = gene, plot.it = TRUE)
-      abline(lm(qq.plot$y~qq.plot$x))
-      lines(c.intervals$z, c.intervals$upper.pw, lty = 2, col = "blue")
-      lines(c.intervals$z, c.intervals$lower.pw, lty = 2, col = "blue")
-    }}
-
-  if (set_par)
-    par(mfrow = mfrow_original, mar = mar_original, oma = oma_original)
-
-})
 
 

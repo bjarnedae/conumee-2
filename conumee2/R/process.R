@@ -80,7 +80,7 @@ setMethod("CNV.fit", signature(query = "CNV.data", ref = "CNV.data", anno = "CNV
               object@fit$coef <- cbind(object@fit$coef,as.numeric(ref.fit$coefficients[-1]))
 
               ref.predict <- predict(ref.fit)
-              ref.predict[ref.predict < 1] <- 1
+              ref.predict[ref.predict < 0] <- 0
 
               object@fit$ratio <- cbind(object@fit$ratio, log2(query@intensity[p,i]) - ref.predict[p])
             }
@@ -238,90 +238,12 @@ setMethod("CNV.detail", signature(object = "CNV.analysis"), function(object) {
 
 
 
-create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf = 0.95, conf.method = "both", reference.line.method = "robust") {
-
-  # remove the NA and sort the sample
-  # the QQ plot is the plot of the sorted sample against the corresponding quantile from the theoretical distribution
-  sorted.sample <- sort(x[!is.na(x)]);
-
-  # the corresponding probabilities, should be (i - 0.5)/n, where i = 1,2,3,...,n
-  probabilities <- ppoints(length(sorted.sample));
-
-  # the corresponding quantile under the theoretical distribution
-  theoretical.quantile <- distribution(probabilities);
-
-  if(reference.line.method == "quartiles") {
-    # get the numbers of the 1/4 and 3/4 quantile in order to draw a reference line
-    quantile.x.axis <- quantile(sorted.sample, c(0.25, 0.75));
-    quantile.y.axis <- distribution(c(0.25, 0.75));
-
-    # the intercept and slope of the reference line
-    b <- (quantile.x.axis[2] - quantile.x.axis[1]) / (quantile.y.axis[2] - quantile.y.axis[1]);
-    a <- quantile.x.axis[1] - b * quantile.y.axis[1];
-  }
-  if(reference.line.method == "diagonal") {
-    a <- 0;
-    b <- 1;
-  }
-  if(reference.line.method == "robust") {
-    coef.linear.model <- coef(lm(sorted.sample ~ theoretical.quantile));
-    a <- coef.linear.model[1];
-    b <- coef.linear.model[2];
-  }
-
-
-  # the reference line
-  fit.value <- a + b * theoretical.quantile;
-
-  # create some vectors to store the returned values
-  upper.pw <- NULL;
-  lower.pw <- NULL;
-  upper.sim <- NULL;
-  lower.sim <- NULL;
-  u <- NULL;	# a vector of logical value of whether the probabilities are in the interval [0,1] for the upper band
-  l <- NULL;	# a vector of logical value of whether the probabilities are in the interval [0,1] for the lower band
-
-  ### pointwise method
-  if (conf.method == "both" | conf.method == "pointwise") {
-
-    # create the numeric derivative of the theoretical quantile distribution
-    numeric.derivative <- function(p) {
-      # set the change in independent variable
-      h <- 10^(-6);
-      if (h * length(sorted.sample) > 1) { h <- 1 / (length(sorted.sample) + 1); }
-      # the function
-      return((distribution(p + h/2) - distribution(p - h/2)) / h);
-    }
-
-    # the standard errors of pointwise method
-    data.standard.error <- b * numeric.derivative(probabilities) * qnorm(1 - (1 - conf)/2) * sqrt(probabilities * (1 - probabilities) / length(sorted.sample));
-
-    # confidence interval of pointwise method
-    upper.pw <- fit.value + data.standard.error;
-    lower.pw <- fit.value - data.standard.error;
-  }
-
-  # return the values for constructing the Confidence Bands of one sample QQ plot
-  # the list to store the returned values
-  returned.values <- list(
-    a = a,
-    b = b,
-    z = theoretical.quantile,
-    upper.pw = upper.pw,
-    lower.pw = lower.pw,
-    u = u,
-    l = l,
-    upper.sim = upper.sim,
-    lower.sim = lower.sim
-  );
-  return (returned.values);
-}
-
-
 #' CNV.focal
 #' @description This optional function provides filtering for diagnostically relevant CNVs (high level amplifications or homozygous deletions).
 #' @param object \code{CNV.analysis} object.
-#' @param conf numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.95}.
+#' @param conf numeric. Confidence level to calculate to determine the log2-threshold for high-level alterations. Choose between \code{0.95} and \code{0.99}. Default to \code{0.95}.
+#' @param R numeric. Parameter for the \code{bootRanges} function. The number of bootstrap samples to generate. Default to \code{100}.
+#' @param blockLength numeric. Parameter for the \code{bootRanges} function. The length (in basepairs) of the blocks for segmented block bootstrapping. Default to \code{500000}.
 #' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1000L}.
 #' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
 #' @return A \code{CNV.analysis} object with significantly altered bins and genes from the Cancer Gene Census (curated by the Sanger Institute).
@@ -329,9 +251,10 @@ create.qqplot.fit.confidence.interval <- function(x, distribution = qnorm, conf 
 #' Secondly, these bins are overlapped with the Cancer Gene Census to identify diagnostically relevant genes. The resulting bins and genes are sorted in regards to their significance.
 #' @examples
 #'
-#' x <- CNV.focal(x, conf = 0.99, minoverlap = 10000L)
-#' x@@detail$cancer_genes
-#' x@@detail$significant_bins
+#' x <- CNV.focal(x, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 10000L)
+#' x@@detail$del.bins  #bins that are part of high-level deletions.
+#' x@@detail$amp.bins  #bins that are part of high-level amplifications.
+#' x@@detail$sig.genes #significantly altered genes from the Cancer Gene Census and the predefined detail_regions.
 #'
 #' @author Bjarne Daenekas \email{conumee@@hovestadt.bio}
 #' @export
@@ -340,86 +263,65 @@ setGeneric("CNV.focal", function(object, ...) {
 })
 
 #' @rdname CNV.focal
-setMethod("CNV.focal", signature(object = "CNV.analysis"),function(object, conf = 0.95, minoverlap = 1000L,...){
-
+# setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 1000L,...){
+CNV.focal <-  function(object, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 1000L,...){
   if(ncol(object@anno@genome) == 2) {
     stop("CNV.focal is not compatible with mouse arrays.")
   }
 
-  data("consensus_cancer_genes_hg19")
+  # data("consensus_cancer_genes_hg19")
 
-  significant.bins <- vector(mode = "list", length = ncol(object@fit$ratio))
-  cancer.genes <- vector(mode = "list", length = ncol(object@fit$ratio))
-  chr.arms <- vector(mode = "list", length = ncol(object@fit$ratio))
-
-  for (i in 1:ncol(object@fit$ratio)){
+  amp_bins <- vector(mode='list', length=ncol(object@fit$ratio))
+  del_bins <- vector(mode='list', length=ncol(object@fit$ratio))
+  sig_genes <- vector(mode='list', length=ncol(object@fit$ratio))
+  for(i in 1:ncol(object@fit$ratio)){
 
     message(paste(colnames(object@fit$ratio)[i]), " (",round(i/ncol(object@fit$ratio)*100, digits = 3), "%", ")", sep = "")
 
-    segments <- object@seg$summary[[i]]
+    segs <- object@seg$summary[[i]]
+    segs <- GRanges(seqnames = segs$chrom, IRanges(start = segs$loc.start, end = segs$loc.end), seqinfo = Seqinfo(genome = "hg19"))
+    seqlevels(segs) <- object@anno@genome$chr
+    segs$seg.median <- object@seg$summary[[i]]$seg.median - object@bin$shift[i]
+    segs$num.markers <- object@seg$summary[[i]]$num.mark
+    segs <- sort(segs)
 
-    bin.ratios <- object@bin$ratio[[i]] - object@bin$shift[i]
+    seq <- rep(segs$seg.median, segs$num.markers)
+    km <- kmeans(seq, centers=3, nstart=25)
 
-    residuals <- as.numeric() #inner loop
-    chr_arms <- as.character()
-    for (j in 1:nrow(object@anno@genome)) {
+    bins.log2 <- object@bin$ratio[[i]] - object@bin$shift[i]
+    bins <- object@anno@bins[names(bins.log2)]
+    bins$weight <- 1/object@bin$variance[[i]][names(bins.log2)]
+    bins$log2 <- as.numeric(bins.log2)
+    bins$state <- km$cluster
+    seqinfo(bins) <- Seqinfo(genome = "hg19")
 
-      seg.chr <- GRanges(seqnames = rownames(object@anno@genome)[j], IRanges(start = segments[segments$chrom == rownames(object@anno@genome[j,]),]$loc.start, end = segments[segments$chrom == rownames(object@anno@genome[j,]),]$loc.end))
-      p <- restrict(seg.chr, start = 1, end = object@anno@genome[j, "pq"])
-      q <- restrict(seg.chr, start = object@anno@genome[j, "pq"]+1, end = object@anno@genome[j, "size"])
 
-      first <- IRanges(start = 1, end = object@anno@genome[j,3])
-      first <- GRanges(seqnames = rownames(object@anno@genome)[j], first)
-      second <- IRanges(start = object@anno@genome[j,"pq"]+1, end = object@anno@genome[j,"size"])
-      second <- GRanges(seqnames = rownames(object@anno@genome)[j], second)
+    seg <- lapply(seq_len(3), function(s){ # Combine nearby regions within same states
+      x <- reduce(bins[bins$state == s])
+      mcols(x)$state <- s
+      x
+    })
 
-      h.1 <- findOverlaps(query = object@anno@bins, subject = first, type = "within", ignore.strand = TRUE)
-      ind.1 <- queryHits(h.1)
+    seg <- c(seg[[1]], seg[[2]], seg[[3]])
 
-      h.2 <- findOverlaps(query = object@anno@bins, subject = second, type = "within", ignore.strand = TRUE)
-      ind.2 <- queryHits(h.2)
-
-      names.1 <- names(object@anno@bins[ind.1])
-      names.2 <- names(object@anno@bins[ind.2])
-
-      if(length(which(width(p) >= object@anno@genome[j, "pq"]/3)) < 2){
-      if (length(names.1)>0) {
-        chr_arms_p <- paste("chr", j,"p", sep = "")
-        c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.1], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
-        qq.plot <- qqnorm(bin.ratios[names.1], plot.it = FALSE)
-        y.c <- qq.plot$y[order(qq.plot$x)]
-        upper.outliers <- which(y.c>c.intervals$upper.pw)
-        upper.residuals <- y.c[upper.outliers] - c.intervals$upper.pw[upper.outliers]
-        lower.outliers <- which(y.c<c.intervals$lower.pw)
-        lower.residuals <- y.c[lower.outliers] - c.intervals$lower.pw[lower.outliers]
-        residuals.1 <- c(abs(upper.residuals), abs(lower.residuals))
-      }}
-
-      if(length(which(width(p) >= (object@anno@genome[j,"size"] - (x@anno@genome[j, "pq"]+1))/3)) < 2){
-      if (length(names.2)>0) {
-        chr_arms_q <- paste("chr", j,"q", sep = "")
-        c.intervals <- create.qqplot.fit.confidence.interval(bin.ratios[names.2], distribution = qnorm, conf = conf, conf.method = "pointwise", reference.line.method = "robust")
-        qq.plot <- qqnorm(bin.ratios[names.2], plot.it = FALSE)
-        y.c <- qq.plot$y[order(qq.plot$x)]
-        upper.outliers <- which(y.c>c.intervals$upper.pw)
-        upper.residuals <- y.c[upper.outliers] - c.intervals$upper.pw[upper.outliers]
-        lower.outliers <- which(y.c<c.intervals$lower.pw)
-        lower.residuals <- y.c[lower.outliers] - c.intervals$lower.pw[lower.outliers]
-        residuals.2 <- c(abs(upper.residuals), abs(lower.residuals))
-      }}
-
-      my_out <- c(residuals.1, residuals.2)
-      my_out2 <- c(chr_arms_p, chr_arms_q)
-      residuals <- c(residuals, my_out)
-      chr_arms <- c(chr_arms, my_out2)
-      residuals.1 <- NULL
-      residuals.2 <- NULL
-      chr_arms_p <- NULL
-      chr_arms_q <- NULL
+    if(min(km$size)>=20){
+      boots <- bootRanges(bins, blockLength = blockLength, R = R, seg = seg, exclude = object@anno@exclude, proportionLength = FALSE)
+    } else{ #bootRanges can't deal with clusters that are too small (<20), proportionLength = TRUE then
+      message("One kmeans cluster is very small (<20), setting proportionLength=TRUE.")
+      boots <- bootRanges(bins, blockLength = blockLength, R = R, seg = seg, exclude = object@anno@exclude, proportionLength = TRUE)
     }
 
-    outliers <- sort(residuals, decreasing = TRUE)
-    significant.bins[[i]] <- object@anno@bins[names(outliers)]
+    t <- round(length(boots) * (1-conf), digits = 0)/2
+    del_t <- round(sort(boots$log2)[t], digits = 3)
+    amp_t <- round(sort(boots$log2, decreasing =  TRUE)[t], digits = 3)
+
+    bins.total <- object@bin$ratio[[i]] - object@bin$shift[i]
+    bins.amp <- sort(bins.total[bins.total >= amp_t], decreasing = TRUE)
+    bins.del <- sort(bins.total[bins.total <= del_t])
+    sig.bins <- sort(c(abs(bins.amp), abs(bins.del)), decreasing = TRUE)
+
+    amp_bins[[i]] <- bins.amp
+    del_bins[[i]] <- bins.del
 
     if(length(object@anno@detail) >= 1){
       dif <- setdiff(consensus_cancer_genes_hg19$SYMBOL, object@anno@detail$name)
@@ -432,23 +334,22 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"),function(object, conf 
       cgenes <- consensus_cancer_genes_hg19
     }
 
-    h.cancer_genes <- findOverlaps(query = object@anno@bins[names(outliers)], subject = cgenes, minoverlap = minoverlap)
+    h.cancer_genes <- findOverlaps(query = object@anno@bins[names(sig.bins)], subject = cgenes, minoverlap = minoverlap)
     significant.genes <- cgenes[unique(subjectHits(h.cancer_genes))]$SYMBOL
-    cancer.genes[[i]] <- significant.genes
-    chr.arms[[i]] <- chr_arms
+    sig_genes[[i]] <- significant.genes
+    }
 
-  }
+  names(del_bins) <- colnames(object@fit$ratio)
+  names(amp_bins) <- colnames(object@fit$ratio)
+  names(sig_genes) <- colnames(object@fit$ratio)
 
-  names(significant.bins) <- colnames(object@fit$ratio)
-  names(cancer.genes) <- colnames(object@fit$ratio)
-  names(chr.arms) <- colnames(object@fit$ratio)
-  object@detail$significant_bins <- significant.bins
-  object@detail$cancer_genes <- cancer.genes
-  object@detail$chromosome_arms <- chr.arms
+  object@detail$del.bins <- del_bins
+  object@detail$amp.bins <- amp_bins
+  object@detail$sig.genes <- sig_genes
 
   return(object)
 
-})
+}
 
 
 #' @import DNAcopy
