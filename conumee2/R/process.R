@@ -238,8 +238,11 @@ setMethod("CNV.detail", signature(object = "CNV.analysis"), function(object) {
 
 
 
+#' @import nullranges
+NULL
+
 #' CNV.focal
-#' @description This optional function provides filtering for diagnostically relevant CNVs (high level amplifications or homozygous deletions).
+#' @description This function provides a statistical assessment for focal CNVs.
 #' @param object \code{CNV.analysis} object.
 #' @param conf numeric. Confidence level to calculate to determine the log2-threshold for high-level alterations. Choose between \code{0.95} and \code{0.99}. Default to \code{0.95}.
 #' @param R numeric. Parameter for the \code{bootRanges} function. The number of bootstrap samples to generate. Default to \code{100}.
@@ -247,8 +250,7 @@ setMethod("CNV.detail", signature(object = "CNV.analysis"), function(object) {
 #' @param minoverlap integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1000L}.
 #' @param ... Additional parameters (\code{CNV.detailplot} generic, currently not used).
 #' @return A \code{CNV.analysis} object with significantly altered bins and genes from the Cancer Gene Census (curated by the Sanger Institute).
-#' @details This function should facilitate the detection of diagnostically relevant CNVs that affect single genes. Therefore, a qqplot illustrating the bins' log2-ratios is created for each chromosome arm. In the first step, bins that lie outside the confidence interval are identified and sorted based on their residuals to the confidence curves.
-#' Secondly, these bins are overlapped with the Cancer Gene Census to identify diagnostically relevant genes. The resulting bins and genes are sorted in regards to their significance.
+#' @details This function should facilitate the detection of diagnostically relevant CNVs that affect single genes. Segmented Block Bootstrapping is performed to define sample-specific Log2ratio thresholds for high-level alterations.
 #' @examples
 #'
 #' x <- CNV.focal(x, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 10000L)
@@ -263,13 +265,12 @@ setGeneric("CNV.focal", function(object, ...) {
 })
 
 #' @rdname CNV.focal
-# setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 1000L,...){
-CNV.focal <-  function(object, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 1000L,...){
+setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 1000L,...){
   if(ncol(object@anno@genome) == 2) {
     stop("CNV.focal is not compatible with mouse arrays.")
   }
 
-  # data("consensus_cancer_genes_hg19")
+  data("consensus_cancer_genes_hg19")
 
   amp_bins <- vector(mode='list', length=ncol(object@fit$ratio))
   del_bins <- vector(mode='list', length=ncol(object@fit$ratio))
@@ -349,7 +350,7 @@ CNV.focal <-  function(object, conf = 0.95, R = 100, blockLength = 500000, minov
 
   return(object)
 
-}
+})
 
 
 #' @import DNAcopy

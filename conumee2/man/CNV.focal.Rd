@@ -7,14 +7,25 @@
 \usage{
 CNV.focal(object, ...)
 
-\S4method{CNV.focal}{CNV.analysis}(object, conf = 0.99, minoverlap = 1000L, ...)
+\S4method{CNV.focal}{CNV.analysis}(
+  object,
+  conf = 0.95,
+  R = 100,
+  blockLength = 5e+05,
+  minoverlap = 1000L,
+  ...
+)
 }
 \arguments{
 \item{object}{\code{CNV.analysis} object.}
 
 \item{...}{Additional parameters (\code{CNV.detailplot} generic, currently not used).}
 
-\item{conf}{numeric. This parameter affects the plotted confidence intervals. Which confidence level should be used? Default to \code{0.99}.}
+\item{conf}{numeric. Confidence level to calculate to determine the log2-threshold for high-level alterations. Choose between \code{0.95} and \code{0.99}. Default to \code{0.95}.}
+
+\item{R}{numeric. Parameter for the \code{bootRanges} function. The number of bootstrap samples to generate. Default to \code{100}.}
+
+\item{blockLength}{numeric. Parameter for the \code{bootRanges} function. The length (in basepairs) of the blocks for segmented block bootstrapping. Default to \code{500000}.}
 
 \item{minoverlap}{integer. The function determines the bins that overlap with the genes of interest. Which minimum number of basepairs should be considered for an overlap? Defaul to \code{1000L}.}
 }
@@ -22,17 +33,17 @@ CNV.focal(object, ...)
 A \code{CNV.analysis} object with significantly altered bins and genes from the Cancer Gene Census (curated by the Sanger Institute).
 }
 \description{
-This optional function provides filtering for diagnostically relevant CNVs (high level amplifications or homozygous deletions).
+This function provides a statistical assessment for focal CNVs.
 }
 \details{
-This function should facilitate the detection of diagnostically relevant CNVs that affect single genes. Therefore, a qqplot illustrating the bins' log2-ratios is created for each chromosome arm. In the first step, bins that lie outside the confidence interval are identified and sorted based on their residuals to the confidence curves.
-Secondly, these bins are overlapped with the Cancer Gene Census to identify diagnostically relevant genes. The resulting bins and genes are sorted in regards to their significance.
+This function should facilitate the detection of diagnostically relevant CNVs that affect single genes. Segmented Block Bootstrapping is performed to define sample-specific Log2ratio thresholds for high-level alterations.
 }
 \examples{
 
-x <- CNV.focal(x, conf = 0.99, minoverlap = 10000L)
-x@detail$cancer_genes
-x@detail$significant_bins
+x <- CNV.focal(x, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 10000L)
+x@detail$del.bins  #bins that are part of high-level deletions.
+x@detail$amp.bins  #bins that are part of high-level amplifications.
+x@detail$sig.genes #significantly altered genes from the Cancer Gene Census and the predefined detail_regions.
 
 }
 \author{

@@ -10,14 +10,12 @@ CNV.genomeplot(object, ...)
 \S4method{CNV.genomeplot}{CNV.analysis}(
   object,
   chr = "all",
-  chrX = TRUE,
-  chrY = TRUE,
   centromere = TRUE,
   detail = TRUE,
   main = NULL,
   sig_cgenes = TRUE,
-  nsig_cgenes = 5,
-  output = NULL,
+  nsig_cgenes = 3,
+  output = "output",
   directory = getwd(),
   ylim = c(-1.25, 1.25),
   bins_cex = "standardized",
@@ -39,17 +37,17 @@ CNV.genomeplot(object, ...)
 
 \item{detail}{logical. If available, include labels of detail regions? Defaults to \code{TRUE}.}
 
-\item{main}{character vector. Title of the plot(s). Defaults to sample names. Please provide a vector of the same length as the number of samples.}
+\item{main}{character vector. Title of the plot(s). Default to sample names. Please provide a vector of the same length as the number of samples.}
 
 \item{sig_cgenes}{logical. Should the significant genes from the Cancer Gene Census be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.}
 
-\item{nsig_cgenes}{numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{5}.}
+\item{nsig_cgenes}{numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{3}.}
 
-\item{output}{character. Choose between \code{pdf} and \code{png}. Defaults to \code{NULL}}
+\item{output}{character. Choose between \code{output} (to display it in the graphical output) or \code{pdf} and \code{png} to save it. Defaults to \code{output}.}
 
 \item{directory}{character. Export directory for saving the files}
 
-\item{ylim}{numeric vector. The y limits of the plot. Defaults to \code{c(-1.25, 1.25)}.}
+\item{ylim}{numeric vector. The y limits of the plot. Default to \code{c(-1.25, 1.25)}.}
 
 \item{bins_cex}{character. The size of the individual bin dots is reversely proportional its variance of included probes' log2-ratios. Choose either \code{standardized} for fixed dot sizes (to make plots from different samples comparable) or \code{sample_level} (to scale the dot sizes for each sample individually). Default to \code{standardized}.}
 
@@ -61,7 +59,7 @@ CNV.genomeplot(object, ...)
 
 \item{res}{numeric. Resolution of the saved .png files. Defaults to \code{720}}
 
-\item{cols}{character vector. Colors to use for plotting intensity levels of bins. Centered around 0. Defaults to \code{c('red', 'red', 'lightgrey', 'green', 'green')}.}
+\item{cols}{character vector. Colors to use for plotting intensity levels of bins. Centered around 0. Defaults to \code{c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")}.}
 }
 \value{
 \code{NULL}.
@@ -87,7 +85,7 @@ x <- CNV.segment(CNV.detail(CNV.bin(CNV.fit(query = d['GroupB_1'],
 # output plots
 CNV.genomeplot(x)
 CNV.genomeplot(x, chr = 'chr6')
-CNV.genomeplot(x, output = "pdf", directory = dir)
+CNV.genomeplot(x, output = "pdf", directory = dir, sig_cgenes = TRUE)
 CNV.detailplot(x, name = 'PTEN')
 CNV.detailplot_wrap(x)
 CNV.summaryplot(x)
