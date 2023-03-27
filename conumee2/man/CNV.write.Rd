@@ -16,7 +16,7 @@ CNV.write(object, ...)
 
 \item{file}{Path where output file should be written to. Defaults to \code{NULL}: No file is written, table is returned as data.frame object.}
 
-\item{what}{character. This should be (an unambiguous abbreviation of) one of \code{'probes'}, \code{'bins'}, \code{'detail'}, \code{'segments'}, \code{gistic} or \code{overview}. Defaults to \code{'segments'}.}
+\item{what}{character. This should be (an unambiguous abbreviation of) one of \code{'probes'}, \code{'bins'}, \code{'detail'}, \code{'segments'}, \code{gistic}, \code{overview} or \code{focal}. Defaults to \code{'segments'}.}
 
 \item{threshold}{numeric. Threshold for determining the copy number state. Defaults to \code{0.1}. See Description for details.}
 }
@@ -27,7 +27,7 @@ if parameter \code{file} is not supplied, the table is returned as a \code{data.
 Output CNV analysis results as table.
 }
 \details{
-Function shows the output of the CNV analysis with conumee 2. To use the results as input for GISTIC choose \code{what = 'gistic'}. To assign the resulting segments to their copy number state and their size (focal, arm-level or whole chromosome) choose \code{what = 'overview'}. The threshold for the log2-ratio to identify gains or losses is \code{0.1} by default.
+Function shows the output of the CNV analysis with conumee 2. To use the results as input for GISTIC choose \code{what = 'gistic'}. To assign the resulting segments to their copy number state and their size (focal, arm-level or whole chromosome) choose \code{what = 'overview'}. The threshold for the log2-ratio to identify gains or losses is \code{0.1} by default. To access the results from the Segmented Block Bootstrapping, use \code{what = focal}.
 }
 \examples{
 # prepare
@@ -54,6 +54,7 @@ CNV.write(x, what = 'bins')
 CNV.write(x, what = 'probes')
 CNV.write(x, what = 'gistic')
 CNV.write(x, what = 'overview')
+CNV.write(x, what = 'focal')
 }
 \author{
 Bjarne Daenekas, Volker Hovestadt \email{conumee@hovestadt.bio}

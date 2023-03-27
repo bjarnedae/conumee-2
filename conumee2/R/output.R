@@ -251,10 +251,10 @@ setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object,
          cd_genes <- object@anno@detail[which(object@anno@detail$name %in% object@detail$sig.genes[[i]])]
          mcols(cd_genes) <- data.frame(SYMBOL = cd_genes$name)
          c_genes <- setdiff(object@detail$sig.genes[[i]], cd_genes$SYMBOL)[1:nsig_cgenes]
-         c_genes <- c(cd_genes, consensus_cancer_genes_hg19[c_genes])
+         c_genes <- c(cd_genes, cancer_genes[c_genes])
          names(c_genes) <- c_genes$SYMBOL
        } else{
-         c_genes <- consensus_cancer_genes_hg19[object@detail$sig.genes[[i]][1:nsig_cgenes]]
+         c_genes <- cancer_genes[object@detail$sig.genes[[i]][1:nsig_cgenes]]
        }
 
       d1 <- as.matrix(findOverlaps(query = c_genes, subject = object@anno@probes))
@@ -926,10 +926,10 @@ setMethod("CNV.heatmap", signature(object = "CNV.analysis"), function(object,
 #' @description Output CNV analysis results as table.
 #' @param object \code{CNV.analysis} object.
 #' @param file Path where output file should be written to. Defaults to \code{NULL}: No file is written, table is returned as data.frame object.
-#' @param what character. This should be (an unambiguous abbreviation of) one of \code{'probes'}, \code{'bins'}, \code{'detail'}, \code{'segments'}, \code{gistic} or \code{overview}. Defaults to \code{'segments'}.
+#' @param what character. This should be (an unambiguous abbreviation of) one of \code{'probes'}, \code{'bins'}, \code{'detail'}, \code{'segments'}, \code{gistic}, \code{overview} or \code{focal}. Defaults to \code{'segments'}.
 #' @param threshold numeric. Threshold for determining the copy number state. Defaults to \code{0.1}. See Description for details.
 #' @param ... Additional parameters (\code{CNV.write} generic, currently not used).
-#' @details  Function shows the output of the CNV analysis with conumee 2. To use the results as input for GISTIC choose \code{what = 'gistic'}. To assign the resulting segments to their copy number state and their size (focal, arm-level or whole chromosome) choose \code{what = 'overview'}. The threshold for the log2-ratio to identify gains or losses is \code{0.1} by default.
+#' @details  Function shows the output of the CNV analysis with conumee 2. To use the results as input for GISTIC choose \code{what = 'gistic'}. To assign the resulting segments to their copy number state and their size (focal, arm-level or whole chromosome) choose \code{what = 'overview'}. The threshold for the log2-ratio to identify gains or losses is \code{0.1} by default. To access the results from the Segmented Block Bootstrapping, use \code{what = focal}.
 #' @examples
 #' # prepare
 #' library(minfiData)
@@ -955,6 +955,7 @@ setMethod("CNV.heatmap", signature(object = "CNV.analysis"), function(object,
 #' CNV.write(x, what = 'probes')
 #' CNV.write(x, what = 'gistic')
 #' CNV.write(x, what = 'overview')
+#' CNV.write(x, what = 'focal')
 #' @return if parameter \code{file} is not supplied, the table is returned as a \code{data.frame} object.
 #' @author Bjarne Daenekas, Volker Hovestadt \email{conumee@@hovestadt.bio}
 #' @export
@@ -964,7 +965,7 @@ setGeneric("CNV.write", function(object, ...) {
 
 #' @rdname CNV.write
 setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file = NULL, what = "segments", threshold = 0.1) {
-  w <- pmatch(what, c("probes", "bins", "detail", "segments", "gistic", "overview"))
+  w <- pmatch(what, c("probes", "bins", "detail", "segments", "gistic", "overview", "focal"))
   if (w == 1) {
     if (length(object@fit) == 0)
       stop("fit unavailable, run CNV.fit")
@@ -1109,7 +1110,16 @@ setMethod("CNV.write", signature(object = "CNV.analysis"), function(object, file
         }
       }
     }
-} else {
+} else if (w == 7){
+  if (length(object@detail$sig.genes) == 0)
+    stop("Please run CNV.focal")
+  x <- vector(mode='list', length = 3)
+  x[[1]] <- object@detail$sig.genes
+  x[[2]] <- object@detail$del.bins
+  x[[3]] <- object@detail$amp.bins
+  names(x) <- c("significant.genes", "bins.losses", "bins.gains")
+
+  } else{
     stop("value for what is ambigious.")
   }
   if (is.null(file)) {
