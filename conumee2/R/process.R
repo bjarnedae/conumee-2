@@ -325,14 +325,14 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
     del_bins[[i]] <- bins.del
 
     if(length(object@anno@detail) >= 1){
-      dif <- setdiff(consensus_cancer_genes_hg19$SYMBOL, object@anno@detail$name)
+      dif <- setdiff(cancer_genes$SYMBOL, object@anno@detail$name)
       details <- object@anno@detail
       mcols(details) <- data.frame(SYMBOL = object@anno@detail$name)
-      cgenes <- c(details, consensus_cancer_genes_hg19[dif])
+      cgenes <- c(details, cancer_genes[dif])
     }
 
     if(length(object@anno@detail) == 0){
-      cgenes <- consensus_cancer_genes_hg19
+      cgenes <- cancer_genes
     }
 
     h.cancer_genes <- findOverlaps(query = object@anno@bins[names(sig.bins)], subject = cgenes, minoverlap = minoverlap)
