@@ -265,7 +265,7 @@ setGeneric("CNV.focal", function(object, ...) {
 })
 
 #' @rdname CNV.focal
-setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 1000L,...){
+setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 1000L, proportionLength = TRUE, ...){
   if(ncol(object@anno@genome) == 2) {
     stop("CNV.focal is not compatible with mouse arrays.")
   }
@@ -305,12 +305,14 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
 
     seg <- c(seg[[1]], seg[[2]], seg[[3]])
 
-    if(min(km$size)>=20){
-      boots <- bootRanges(bins, blockLength = blockLength, R = R, seg = seg, exclude = object@anno@exclude, proportionLength = FALSE)
-    } else{ #bootRanges can't deal with clusters that are too small (<20), proportionLength = TRUE then
-      message("One kmeans cluster is very small (<20), setting proportionLength=TRUE.")
-      boots <- bootRanges(bins, blockLength = blockLength, R = R, seg = seg, exclude = object@anno@exclude, proportionLength = TRUE)
-    }
+    # if(min(km$size)>=20){
+    #   boots <- bootRanges(bins, blockLength = blockLength, R = R, seg = seg, exclude = object@anno@exclude, proportionLength = FALSE)
+    # } else{ #bootRanges can't deal with clusters that are too small (<20), proportionLength = TRUE then
+    #   message("One kmeans cluster is very small (<20), setting proportionLength=TRUE.")
+    #   boots <- bootRanges(bins, blockLength = blockLength, R = R, seg = seg, exclude = object@anno@exclude, proportionLength = TRUE)
+    # }
+
+    boots <- bootRanges(bins, blockLength = blockLength, R = R, seg = seg, exclude = object@anno@exclude, proportionLength = proportionLength)
 
     t <- round(length(boots) * (1-conf), digits = 0)/2
     del_t <- round(sort(boots$log2)[t], digits = 3)
