@@ -19,7 +19,7 @@
 #' @param centromere logical. Show dashed lines at centromeres? Defaults to \code{TRUE}.
 #' @param detail logical. If available, include labels of detail regions? Defaults to \code{TRUE}.
 #' @param bins_cex character. The size of the individual bin dots is reversely proportional its variance of included probes' log2-ratios. Choose either \code{standardized} for fixed dot sizes (to make plots from different samples comparable) or \code{sample_level} (to scale the dot sizes for each sample individually). Default to \code{standardized}.
-#' @param sig_cgenes logical. Should the significant genes from the Cancer Gene Census be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.
+#' @param sig_cgenes logical. Should the significant genes from the Cancer Gene Census be plotted that were identified with \code{CNV.focal}? Default to \code{FALSE}.
 #' @param nsig_cgenes numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{3}.
 #' @param main character vector. Title of the plot(s). Default to sample names. Please provide a vector of the same length as the number of samples.
 #' @param ylim numeric vector. The y limits of the plot. Default to \code{c(-1.25, 1.25)}.
@@ -66,7 +66,7 @@ setGeneric("CNV.genomeplot", function(object, ...) {
 
 #' @rdname CNV.genomeplot
 setMethod("CNV.genomeplot", signature(object = "CNV.analysis"), function(object, chr = "all", centromere = TRUE, detail = TRUE,
-           main = NULL, sig_cgenes = TRUE, nsig_cgenes = 3, output = "output", directory = getwd(), ylim = c(-1.25, 1.25),
+           main = NULL, sig_cgenes = FALSE, nsig_cgenes = 3, output = "output", directory = getwd(), ylim = c(-1.25, 1.25),
            bins_cex = "standardized", set_par = TRUE,
            width = 12, height = 6, res = 720, cols = c("darkblue","darkblue", "lightgrey", "#F16729", "#F16729")){
 

@@ -13,7 +13,7 @@ CNV.genomeplot(object, ...)
   centromere = TRUE,
   detail = TRUE,
   main = NULL,
-  sig_cgenes = TRUE,
+  sig_cgenes = FALSE,
   nsig_cgenes = 3,
   output = "output",
   directory = getwd(),
@@ -39,7 +39,7 @@ CNV.genomeplot(object, ...)
 
 \item{main}{character vector. Title of the plot(s). Default to sample names. Please provide a vector of the same length as the number of samples.}
 
-\item{sig_cgenes}{logical. Should the significant genes from the Cancer Gene Census be plotted that were identified with \code{CNV.focal}? Default to \code{TRUE}.}
+\item{sig_cgenes}{logical. Should the significant genes from the Cancer Gene Census be plotted that were identified with \code{CNV.focal}? Default to \code{FALSE}.}
 
 \item{nsig_cgenes}{numeric. How many significant genes identified with \code{CNV.focal} should be plotted? Default to \code{3}.}
 
