@@ -266,16 +266,18 @@ setGeneric("CNV.focal", function(object, ...) {
 })
 
 #' @rdname CNV.focal
-setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, R = 100, blockLength = 500000, minoverlap = 1000L, proportionLength = TRUE, ...){
+setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf = 0.95, R = 100, blockLength = 500000, proportionLength = TRUE, ...){
   if(ncol(object@anno@genome) == 2) {
     stop("CNV.focal is not compatible with mouse arrays.")
   }
 
   data("consensus_cancer_genes_hg19")
+  data("genes")
 
   amp_bins <- vector(mode='list', length=ncol(object@fit$ratio))
   del_bins <- vector(mode='list', length=ncol(object@fit$ratio))
-  sig_genes <- vector(mode='list', length=ncol(object@fit$ratio))
+  amp_genes <- vector(mode='list', length=ncol(object@fit$ratio))
+  del_genes <- vector(mode='list', length=ncol(object@fit$ratio))
   for(i in 1:ncol(object@fit$ratio)){
 
     message(paste(colnames(object@fit$ratio)[i]), " (",round(i/ncol(object@fit$ratio)*100, digits = 3), "%", ")", sep = "")
@@ -327,29 +329,44 @@ setMethod("CNV.focal", signature(object = "CNV.analysis"), function(object, conf
     amp_bins[[i]] <- bins.amp
     del_bins[[i]] <- bins.del
 
+    genes.n <- setdiff(cancer_genes$SYMBOL, genes$SYMBOL)
+    genes.c <- sort(c(genes, cancer_genes[genes.n]))
+
     if(length(object@anno@detail) >= 1){
-      dif <- setdiff(cancer_genes$SYMBOL, object@anno@detail$name)
+      dif <- setdiff(genes.c$SYMBOL, object@anno@detail$name)
       details <- object@anno@detail
       mcols(details) <- data.frame(SYMBOL = object@anno@detail$name)
-      cgenes <- c(details, cancer_genes[dif])
+      cgenes <- c(details, genes.c[dif])
     }
 
     if(length(object@anno@detail) == 0){
-      cgenes <- cancer_genes
+      cgenes <- genes.c
     }
 
-    h.cancer_genes <- findOverlaps(query = object@anno@bins[names(sig.bins)], subject = cgenes, minoverlap = minoverlap)
-    significant.genes <- cgenes[unique(subjectHits(h.cancer_genes))]$SYMBOL
-    sig_genes[[i]] <- significant.genes
+    d1 <- as.matrix(findOverlaps(query = cgenes, subject = anno@probes))
+    d2 <- data.frame(gene = values(cgenes)$SYMBOL[d1[,"queryHits"]], probe = names(anno@probes[d1[, "subjectHits"]]),stringsAsFactors = FALSE)
+    cgenes.ratio <- sapply(split(x@fit$ratio[d2[, "probe"],i], d2[, "gene"]), median, na.rm = TRUE)[values(cgenes)$SYMBOL]
+    cgenes.ratio <- cgenes.ratio - x@bin$shift[i]
+
+    amp.genes <- names(which(cgenes.ratio >= amp_t))
+    del.genes <- names(which(cgenes.ratio <= del_t))
+
+
+    amp_genes[[i]] <- amp.genes
+    del_genes[[i]] <- del.genes
     }
 
   names(del_bins) <- colnames(object@fit$ratio)
   names(amp_bins) <- colnames(object@fit$ratio)
-  names(sig_genes) <- colnames(object@fit$ratio)
+  names(amp_genes) <- colnames(object@fit$ratio)
+  names(del_genes) <- colnames(object@fit$ratio)
+
 
   object@detail$del.bins <- del_bins
   object@detail$amp.bins <- amp_bins
-  object@detail$sig.genes <- sig_genes
+  object@detail$amp.genes <- amp_genes
+  object@detail$del.genes <- del_genes
+
 
   return(object)
 
