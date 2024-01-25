@@ -17,7 +17,7 @@ Imports:
     IRanges,
     GenomeInfoDb
 Depends:
-    R (>= 3.5.0),
+    R (>= 4.2.0),
     minfi,
     IlluminaHumanMethylation450kmanifest,
     IlluminaHumanMethylation450kanno.ilmn12.hg19,
