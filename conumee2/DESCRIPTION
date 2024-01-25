@@ -25,7 +25,8 @@ Depends:
     IlluminaHumanMethylationEPICanno.ilm10b4.hg19,
     RnBeads,
     illuminaio,
-    nullranges
+    nullranges,
+    plotly
 Suggests:
     BiocStyle,
     knitr,
